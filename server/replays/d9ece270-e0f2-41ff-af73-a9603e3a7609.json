@@ -1,0 +1,715 @@
+{
+  "match_id": "d9ece270-e0f2-41ff-af73-a9603e3a7609",
+  "log": [
+    {
+      "event": "match_start",
+      "match_id": "d9ece270-e0f2-41ff-af73-a9603e3a7609",
+      "players": [
+        "85092e2c-8fd8-469c-b6b4-127ffcd19ba6",
+        "53f63a52-d13a-495a-9b7b-196a5454a8a0"
+      ],
+      "seed": 4018746688,
+      "timestamp": "2026-04-06T23:38:47.784863+00:00"
+    },
+    {
+      "event": "phase",
+      "phase": "buy",
+      "round": 1
+    },
+    {
+      "event": "action",
+      "player_id": "85092e2c-8fd8-469c-b6b4-127ffcd19ba6",
+      "action": "buy",
+      "card_id": "stone_golem"
+    },
+    {
+      "event": "action",
+      "player_id": "53f63a52-d13a-495a-9b7b-196a5454a8a0",
+      "action": "buy",
+      "card_id": "stone_golem"
+    },
+    {
+      "event": "action",
+      "player_id": "53f63a52-d13a-495a-9b7b-196a5454a8a0",
+      "action": "lock"
+    },
+    {
+      "event": "action",
+      "player_id": "85092e2c-8fd8-469c-b6b4-127ffcd19ba6",
+      "action": "lock"
+    },
+    {
+      "event": "combat",
+      "round": 1,
+      "winner": null,
+      "damage": 0,
+      "events": [
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "23d852e1",
+          "defender_name": "Stone Golem",
+          "defender_attack": 2
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 2,
+          "defender_id": "23d852e1",
+          "defender_remaining_hp": 1,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "2a9ea2e1",
+          "defender_name": "Stone Golem",
+          "defender_attack": 2
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": -1,
+          "damage_to_attacker": 2,
+          "defender_id": "2a9ea2e1",
+          "defender_remaining_hp": -1,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "2a9ea2e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 0
+        },
+        {
+          "type": "death",
+          "minion_id": "23d852e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 1
+        }
+      ]
+    },
+    {
+      "event": "phase",
+      "phase": "buy",
+      "round": 2
+    },
+    {
+      "event": "action",
+      "player_id": "85092e2c-8fd8-469c-b6b4-127ffcd19ba6",
+      "action": "buy",
+      "card_id": "stone_golem"
+    },
+    {
+      "event": "combat",
+      "round": 2,
+      "winner": 0,
+      "damage": 2,
+      "events": [
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "23d852e1",
+          "defender_name": "Stone Golem",
+          "defender_attack": 2
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 2,
+          "defender_id": "23d852e1",
+          "defender_remaining_hp": 1,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "2a9ea2e1",
+          "defender_name": "Stone Golem",
+          "defender_attack": 2
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": -1,
+          "damage_to_attacker": 2,
+          "defender_id": "2a9ea2e1",
+          "defender_remaining_hp": -1,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "2a9ea2e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 0
+        },
+        {
+          "type": "death",
+          "minion_id": "23d852e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 1
+        }
+      ]
+    },
+    {
+      "event": "phase",
+      "phase": "buy",
+      "round": 3
+    },
+    {
+      "event": "action",
+      "player_id": "85092e2c-8fd8-469c-b6b4-127ffcd19ba6",
+      "action": "buy",
+      "card_id": "shield_bearer"
+    },
+    {
+      "event": "action",
+      "player_id": "53f63a52-d13a-495a-9b7b-196a5454a8a0",
+      "action": "buy",
+      "card_id": "shield_bearer"
+    },
+    {
+      "event": "action",
+      "player_id": "85092e2c-8fd8-469c-b6b4-127ffcd19ba6",
+      "action": "lock"
+    },
+    {
+      "event": "action",
+      "player_id": "53f63a52-d13a-495a-9b7b-196a5454a8a0",
+      "action": "lock"
+    },
+    {
+      "event": "combat",
+      "round": 3,
+      "winner": 0,
+      "damage": 2,
+      "events": [
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "6d399bc1",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 2,
+          "damage_to_attacker": 1,
+          "defender_id": "6d399bc1",
+          "defender_remaining_hp": 2,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "df9e806f",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": 2,
+          "damage_to_attacker": 1,
+          "defender_id": "df9e806f",
+          "defender_remaining_hp": 2,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "6d399bc1",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 1,
+          "defender_id": "6d399bc1",
+          "defender_remaining_hp": 0,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "6d399bc1",
+          "minion_name": "Shield Bearer",
+          "player_idx": 1
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "df9e806f",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 1,
+          "defender_id": "df9e806f",
+          "defender_remaining_hp": 0,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "df9e806f",
+          "minion_name": "Shield Bearer",
+          "player_idx": 0
+        },
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "23d852e1",
+          "defender_name": "Stone Golem",
+          "defender_attack": 2
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": -1,
+          "damage_to_attacker": 2,
+          "defender_id": "23d852e1",
+          "defender_remaining_hp": -1,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "2a9ea2e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 0
+        },
+        {
+          "type": "death",
+          "minion_id": "23d852e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 1
+        }
+      ]
+    },
+    {
+      "event": "phase",
+      "phase": "buy",
+      "round": 4
+    },
+    {
+      "event": "combat",
+      "round": 4,
+      "winner": 0,
+      "damage": 2,
+      "events": [
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "6d399bc1",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 2,
+          "damage_to_attacker": 1,
+          "defender_id": "6d399bc1",
+          "defender_remaining_hp": 2,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "df9e806f",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": 2,
+          "damage_to_attacker": 1,
+          "defender_id": "df9e806f",
+          "defender_remaining_hp": 2,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "6d399bc1",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 1,
+          "defender_id": "6d399bc1",
+          "defender_remaining_hp": 0,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "6d399bc1",
+          "minion_name": "Shield Bearer",
+          "player_idx": 1
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "df9e806f",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 1,
+          "defender_id": "df9e806f",
+          "defender_remaining_hp": 0,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "df9e806f",
+          "minion_name": "Shield Bearer",
+          "player_idx": 0
+        },
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "23d852e1",
+          "defender_name": "Stone Golem",
+          "defender_attack": 2
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": -1,
+          "damage_to_attacker": 2,
+          "defender_id": "23d852e1",
+          "defender_remaining_hp": -1,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "2a9ea2e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 0
+        },
+        {
+          "type": "death",
+          "minion_id": "23d852e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 1
+        }
+      ]
+    },
+    {
+      "event": "phase",
+      "phase": "buy",
+      "round": 5
+    },
+    {
+      "event": "combat",
+      "round": 5,
+      "winner": 0,
+      "damage": 2,
+      "events": [
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "6d399bc1",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 2,
+          "damage_to_attacker": 1,
+          "defender_id": "6d399bc1",
+          "defender_remaining_hp": 2,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "df9e806f",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": 2,
+          "damage_to_attacker": 1,
+          "defender_id": "df9e806f",
+          "defender_remaining_hp": 2,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "6d399bc1",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 1,
+          "defender_id": "6d399bc1",
+          "defender_remaining_hp": 0,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "6d399bc1",
+          "minion_name": "Shield Bearer",
+          "player_idx": 1
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "df9e806f",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 1,
+          "defender_id": "df9e806f",
+          "defender_remaining_hp": 0,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "df9e806f",
+          "minion_name": "Shield Bearer",
+          "player_idx": 0
+        },
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "23d852e1",
+          "defender_name": "Stone Golem",
+          "defender_attack": 2
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": -1,
+          "damage_to_attacker": 2,
+          "defender_id": "23d852e1",
+          "defender_remaining_hp": -1,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "2a9ea2e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 0
+        },
+        {
+          "type": "death",
+          "minion_id": "23d852e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 1
+        }
+      ]
+    },
+    {
+      "event": "phase",
+      "phase": "buy",
+      "round": 6
+    },
+    {
+      "event": "action",
+      "player_id": "53f63a52-d13a-495a-9b7b-196a5454a8a0",
+      "action": "lock"
+    },
+    {
+      "event": "combat",
+      "round": 6,
+      "winner": 0,
+      "damage": 2,
+      "events": [
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "6d399bc1",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 2,
+          "damage_to_attacker": 1,
+          "defender_id": "6d399bc1",
+          "defender_remaining_hp": 2,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "df9e806f",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": 2,
+          "damage_to_attacker": 1,
+          "defender_id": "df9e806f",
+          "defender_remaining_hp": 2,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "6d399bc1",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 1,
+          "defender_id": "6d399bc1",
+          "defender_remaining_hp": 0,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "6d399bc1",
+          "minion_name": "Shield Bearer",
+          "player_idx": 1
+        },
+        {
+          "type": "attack",
+          "attacker_id": "23d852e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "df9e806f",
+          "defender_name": "Shield Bearer",
+          "defender_attack": 1
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "23d852e1",
+          "attacker_remaining_hp": 1,
+          "damage_to_attacker": 1,
+          "defender_id": "df9e806f",
+          "defender_remaining_hp": 0,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "df9e806f",
+          "minion_name": "Shield Bearer",
+          "player_idx": 0
+        },
+        {
+          "type": "attack",
+          "attacker_id": "2a9ea2e1",
+          "attacker_name": "Stone Golem",
+          "attacker_attack": 2,
+          "defender_id": "23d852e1",
+          "defender_name": "Stone Golem",
+          "defender_attack": 2
+        },
+        {
+          "type": "damage_dealt",
+          "attacker_id": "2a9ea2e1",
+          "attacker_remaining_hp": -1,
+          "damage_to_attacker": 2,
+          "defender_id": "23d852e1",
+          "defender_remaining_hp": -1,
+          "damage_to_defender": 2
+        },
+        {
+          "type": "death",
+          "minion_id": "2a9ea2e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 0
+        },
+        {
+          "type": "death",
+          "minion_id": "23d852e1",
+          "minion_name": "Stone Golem",
+          "player_idx": 1
+        }
+      ]
+    },
+    {
+      "event": "phase",
+      "phase": "buy",
+      "round": 7
+    },
+    {
+      "event": "action",
+      "player_id": "53f63a52-d13a-495a-9b7b-196a5454a8a0",
+      "action": "concede"
+    },
+    {
+      "event": "match_end",
+      "winner": "85092e2c-8fd8-469c-b6b4-127ffcd19ba6",
+      "timestamp": "2026-04-06T23:41:13.848694+00:00"
+    }
+  ]
+}

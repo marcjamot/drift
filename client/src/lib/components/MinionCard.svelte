@@ -1,0 +1,304 @@
+<script lang="ts">
+	import type { MinionSnapshot } from '../types.js';
+
+	interface Props {
+		minion: MinionSnapshot;
+		size?: 'small' | 'medium' | 'large';
+		selected?: boolean;
+		highlighted?: boolean;
+		attacking?: boolean;
+		targeted?: boolean;
+		stricken?: boolean;
+		attackDirection?: 'up' | 'down';
+		showHealthLeft?: boolean;
+		dying?: boolean;
+		isNew?: boolean;
+		onclick?: () => void;
+	}
+
+	let {
+		minion,
+		size = 'medium',
+		selected = false,
+		highlighted = false,
+		attacking = false,
+		targeted = false,
+		stricken = false,
+		attackDirection = 'up',
+		showHealthLeft = false,
+		dying = false,
+		isNew = false,
+		onclick
+	}: Props = $props();
+</script>
+
+<button
+	class="minion-card"
+	class:size-small={size === 'small'}
+	class:size-medium={size === 'medium'}
+	class:size-large={size === 'large'}
+	class:selected
+	class:taunt={minion.keywords.includes('taunt')}
+	class:divine={minion.divine_shield}
+	class:highlighted
+	class:attacking
+	class:targeted
+	class:stricken
+	class:attack-up={attackDirection === 'up'}
+	class:attack-down={attackDirection === 'down'}
+	class:dying
+	class:is-new={isNew}
+	{onclick}
+	title={minion.name}
+>
+	{#if showHealthLeft}
+		<div class="health-left" class:low={minion.health <= 2}>
+			<span class="health-left-label">HP</span>
+			<span class="health-left-value">{minion.health}</span>
+		</div>
+	{/if}
+	<div class="name">{minion.name}</div>
+	<div class="keywords">
+		{#each minion.keywords as kw}
+			<span class="keyword">{kw}</span>
+		{/each}
+		{#if minion.divine_shield}
+			<span class="keyword ds">divine</span>
+		{/if}
+	</div>
+	<div class="stats">
+		<span class="atk">{minion.attack}</span>
+		<span class="sep">/</span>
+		<span class="hp" class:damaged={minion.health < minion.max_health}>
+			{minion.health}
+		</span>
+	</div>
+	{#if minion.golden}<div class="star">★</div>{/if}
+</button>
+
+<style>
+	.minion-card {
+		position: relative;
+		width: 104px;
+		min-height: 132px;
+		background: #141420;
+		border: 2px solid #333;
+		border-radius: 14px;
+		padding: 10px 8px 8px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		cursor: pointer;
+		font-family: inherit;
+		color: #e0e0e0;
+		transition:
+			border-color 0.15s,
+			transform 0.12s,
+			opacity 0.4s,
+		box-shadow 0.2s;
+	}
+
+	.minion-card:hover {
+		border-color: #666;
+		transform: translateY(-3px);
+	}
+
+	.minion-card.selected {
+		border-color: #d4a020;
+		box-shadow: 0 0 10px #d4a02055;
+	}
+	.minion-card.taunt {
+		border-color: #8a6020;
+	}
+	.minion-card.divine {
+		border-color: #6090d0;
+		box-shadow: 0 0 8px #6090d033;
+	}
+	.minion-card.highlighted {
+		border-color: #4b88ff;
+		box-shadow: 0 0 16px #4b88ff66;
+	}
+	.minion-card.attacking {
+		border-color: #4b88ff;
+		box-shadow: 0 0 16px #4b88ff66;
+		z-index: 2;
+	}
+	.minion-card.attacking.attack-up {
+		transform: translateY(-10px) scale(1.03);
+	}
+	.minion-card.attacking.attack-down {
+		transform: translateY(10px) scale(1.03);
+	}
+	.minion-card.targeted {
+		border-color: #d35b5b;
+		border-style: dashed;
+		box-shadow: 0 0 0 2px #d35b5b44;
+	}
+	.minion-card.stricken {
+		animation: struck-shake 0.38s ease-in-out;
+	}
+	.minion-card.dying {
+		opacity: 0;
+		transform: scale(0.7) translateY(10px);
+		pointer-events: none;
+	}
+
+	.minion-card.is-new {
+		animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+	}
+
+	@keyframes pop-in {
+		from {
+			opacity: 0;
+			transform: scale(0.5) translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1) translateY(0);
+		}
+	}
+
+	@keyframes struck-shake {
+		0% { transform: translateX(0); }
+		20% { transform: translateX(-5px); }
+		40% { transform: translateX(5px); }
+		60% { transform: translateX(-4px); }
+		80% { transform: translateX(4px); }
+		100% { transform: translateX(0); }
+	}
+
+	.minion-card.size-small {
+		width: 86px;
+		min-height: 108px;
+		border-radius: 10px;
+		padding: 8px 6px 6px;
+		gap: 4px;
+	}
+
+	.minion-card.size-large {
+		width: 136px;
+		min-height: 172px;
+		border-radius: 18px;
+		padding: 12px 10px 10px;
+		gap: 8px;
+	}
+
+	.name {
+		font-size: 13px;
+		font-weight: 600;
+		text-align: center;
+		line-height: 1.2;
+		color: #bbb;
+		word-break: break-word;
+	}
+	.minion-card.size-small .name {
+		font-size: 11px;
+	}
+	.minion-card.size-large .name {
+		font-size: 16px;
+	}
+	.keywords {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 4px;
+	}
+	.keyword {
+		font-size: 9px;
+		background: #222;
+		border-radius: 999px;
+		padding: 2px 6px;
+		color: #999;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+	.minion-card.size-small .keyword {
+		font-size: 8px;
+		padding: 1px 5px;
+	}
+	.minion-card.size-large .keyword {
+		font-size: 10px;
+		padding: 3px 7px;
+	}
+	.ds {
+		color: #6090d0;
+	}
+	.stats {
+		font-size: 24px;
+		font-weight: 700;
+		margin-top: auto;
+		letter-spacing: -0.02em;
+	}
+	.minion-card.size-small .stats {
+		font-size: 19px;
+	}
+	.minion-card.size-large .stats {
+		font-size: 30px;
+	}
+	.atk {
+		color: #e08050;
+	}
+	.sep {
+		color: #444;
+	}
+	.hp {
+		color: #50c050;
+	}
+	.hp.damaged {
+		color: #c04040;
+	}
+	.star {
+		position: absolute;
+		top: 6px;
+		right: 8px;
+		font-size: 14px;
+		color: #d4a020;
+	}
+	.minion-card.size-small .star {
+		font-size: 11px;
+		top: 4px;
+		right: 6px;
+	}
+	.health-left {
+		position: absolute;
+		top: 8px;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 12px;
+		font-weight: 700;
+		line-height: 1;
+		padding: 4px 8px;
+		border-radius: 999px;
+		background: #10291a;
+		border: 1px solid #3f8a56;
+		color: #c9ffd6;
+		box-shadow: 0 2px 10px #00000055;
+		z-index: 3;
+		white-space: nowrap;
+	}
+	.minion-card.size-small .health-left {
+		font-size: 10px;
+		padding: 3px 6px;
+	}
+	.health-left.low {
+		background: #341515;
+		border-color: #b04d4d;
+		color: #ffd0d0;
+	}
+	.health-left-label {
+		font-size: 8px;
+		letter-spacing: 0.08em;
+		color: #8bbd98;
+	}
+	.health-left.low .health-left-label {
+		color: #dba2a2;
+	}
+	.health-left-value {
+		font-size: 11px;
+		font-weight: 800;
+	}
+</style>

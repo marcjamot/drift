@@ -1,0 +1,41 @@
+services:
+
+  server:
+    build: ./server
+    ports:
+      - "8765:8765"
+    volumes:
+      # Hot reload: mount source so watchdog picks up changes
+      - ./server/src:/app/src
+      - ./server/replays:/app/replays
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    command: >
+      python -m watchfiles "python run.py" src
+    develop:
+      watch:
+        - action: sync
+          path: ./server/src
+          target: /app/src
+
+  client:
+    build: ./client
+    ports:
+      - "5173:5173"
+    volumes:
+      # Bind-mount source; node_modules stays in the image
+      - ./client/src:/app/src
+      - ./client/static:/app/static
+      - ./client/svelte.config.js:/app/svelte.config.js
+      - ./client/vite.config.ts:/app/vite.config.ts
+    environment:
+      - NODE_ENV=development
+    develop:
+      watch:
+        - action: sync
+          path: ./client/src
+          target: /app/src
+        - action: sync
+          path: ./client/static
+          target: /app/static

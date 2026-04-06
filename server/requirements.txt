@@ -1,0 +1,2 @@
+websockets>=13.0
+watchfiles>=0.21

@@ -1,0 +1,106 @@
+<script lang="ts">
+	import type { MinionSnapshot } from '../types.js';
+	import MinionCard from './MinionCard.svelte';
+
+	interface Props {
+		minions: MinionSnapshot[];
+		label?: string;
+		size?: 'small' | 'medium' | 'large';
+		align?: 'start' | 'center';
+		emptyLabel?: string;
+		selectable?: boolean;
+		selectedIndex?: number | null;
+		highlightIds?: Set<string>;
+		attackingIds?: Set<string>;
+		targetedIds?: Set<string>;
+		strickenIds?: Set<string>;
+		attackDirection?: 'up' | 'down';
+		showHealthLeft?: boolean;
+		dyingIds?: Set<string>;
+		newIds?: Set<string>;
+		onselect?: (index: number) => void;
+	}
+
+	let {
+		minions,
+		label = '',
+		size = 'medium',
+		align = 'center',
+		emptyLabel = 'empty',
+		selectable = false,
+		selectedIndex = null,
+		highlightIds = new Set(),
+		attackingIds = new Set(),
+		targetedIds = new Set(),
+		strickenIds = new Set(),
+		attackDirection = 'up',
+		showHealthLeft = false,
+		dyingIds = new Set(),
+		newIds = new Set(),
+		onselect
+	}: Props = $props();
+</script>
+
+<div class="board-wrap">
+	{#if label}
+		<div class="label">{label}</div>
+	{/if}
+	<div class="board" class:centered={align === 'center'}>
+		{#each minions as minion, i (minion.instance_id)}
+			<MinionCard
+				{minion}
+				{size}
+				selected={selectedIndex === i}
+				highlighted={highlightIds.has(minion.instance_id)}
+				attacking={attackingIds.has(minion.instance_id)}
+				targeted={targetedIds.has(minion.instance_id)}
+				stricken={strickenIds.has(minion.instance_id)}
+				{attackDirection}
+				{showHealthLeft}
+				dying={dyingIds.has(minion.instance_id)}
+				isNew={newIds.has(minion.instance_id)}
+				onclick={selectable ? () => onselect?.(i) : undefined}
+			/>
+		{/each}
+		{#if minions.length === 0}
+			<span class="empty">{emptyLabel}</span>
+		{/if}
+	</div>
+</div>
+
+<style>
+	.board-wrap {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		height: 100%;
+	}
+	.label {
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #444;
+	}
+	.board {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 14px;
+		background: #0c0c18;
+		border: 1px solid #1a1a28;
+		border-radius: 18px;
+		padding: 16px;
+		align-items: flex-end;
+		min-height: 0;
+		align-content: center;
+	}
+	.board.centered {
+		justify-content: center;
+	}
+	.empty {
+		color: #2a2a3a;
+		font-size: 12px;
+		align-self: center;
+		margin: auto;
+		letter-spacing: 0.06em;
+	}
+</style>
