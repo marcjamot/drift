@@ -6,6 +6,7 @@
 		minions: MinionSnapshot[];
 		label?: string;
 		size?: 'small' | 'medium' | 'large';
+		cardsDraggable?: boolean;
 		align?: 'start' | 'center';
 		emptyLabel?: string;
 		selectable?: boolean;
@@ -24,12 +25,17 @@
 		/** Strip background/border so cards float directly in a parent arena. */
 		bare?: boolean;
 		onselect?: (index: number) => void;
+		oncarddragstart?: (index: number, event: DragEvent) => void;
+		oncarddragend?: (event: DragEvent) => void;
+		oncarddragover?: (index: number, event: DragEvent) => void;
+		oncarddrop?: (index: number, event: DragEvent) => void;
 	}
 
 	let {
 		minions,
 		label = '',
 		size = 'medium',
+		cardsDraggable = false,
 		align = 'center',
 		emptyLabel = 'empty',
 		selectable = false,
@@ -45,7 +51,11 @@
 		newIds = new Set(),
 		cardStyles = new Map(),
 		bare = false,
-		onselect
+		onselect,
+		oncarddragstart,
+		oncarddragend,
+		oncarddragover,
+		oncarddrop
 	}: Props = $props();
 </script>
 
@@ -55,23 +65,34 @@
 	{/if}
 	<div class="board" class:centered={align === 'center'} class:bare>
 		{#each minions as minion, i (minion.instance_id)}
-			<MinionCard
-				cardId={`card-${minion.instance_id}`}
-				{minion}
-				{size}
-				selected={selectedIndex === i}
-				highlighted={highlightIds.has(minion.instance_id)}
-				attacking={attackingIds.has(minion.instance_id)}
-				targeted={targetedIds.has(minion.instance_id)}
-				stricken={strickenIds.has(minion.instance_id)}
-				impact={impactIds.has(minion.instance_id)}
-				{attackDirection}
-				{showHealthLeft}
-				dying={dyingIds.has(minion.instance_id)}
-				isNew={newIds.has(minion.instance_id)}
-				lungeStyle={cardStyles.get(minion.instance_id) ?? ''}
-				onclick={selectable ? () => onselect?.(i) : undefined}
-			/>
+			<div
+				class="card-slot"
+				role="group"
+				aria-label={`Board slot ${i + 1}`}
+				ondragover={oncarddragover ? (event) => oncarddragover(i, event) : undefined}
+				ondrop={oncarddrop ? (event) => oncarddrop(i, event) : undefined}
+			>
+				<MinionCard
+					cardId={`card-${minion.instance_id}`}
+					{minion}
+					{size}
+					draggable={cardsDraggable}
+					selected={selectedIndex === i}
+					highlighted={highlightIds.has(minion.instance_id)}
+					attacking={attackingIds.has(minion.instance_id)}
+					targeted={targetedIds.has(minion.instance_id)}
+					stricken={strickenIds.has(minion.instance_id)}
+					impact={impactIds.has(minion.instance_id)}
+					{attackDirection}
+					{showHealthLeft}
+					dying={dyingIds.has(minion.instance_id)}
+					isNew={newIds.has(minion.instance_id)}
+					lungeStyle={cardStyles.get(minion.instance_id) ?? ''}
+					onclick={selectable ? () => onselect?.(i) : undefined}
+					ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, event) : undefined}
+					ondragend={cardsDraggable ? oncarddragend : undefined}
+				/>
+			</div>
 		{/each}
 		{#if minions.length === 0}
 			<span class="empty">{emptyLabel}</span>
@@ -104,6 +125,10 @@
 	}
 	.board.centered {
 		justify-content: center;
+	}
+	.card-slot {
+		position: relative;
+		border-radius: 16px;
 	}
 	/* bare = no panel chrome; cards float directly in the arena */
 	.board.bare {

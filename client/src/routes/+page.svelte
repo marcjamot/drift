@@ -7,15 +7,27 @@
 
 	onMount(() => connect());
 
+	const BUY_COST = 3;
+	const HAND_LIMIT = 10;
+	const BOARD_LIMIT = 7;
+
 	let nameInput = $state('');
-	let selectedBoardIdx = $state<number | null>(null);
-	let selectedHandIdx = $state<number | null>(null);
 	let concedeArmed = $state(false);
 	let concedeTimer = 0;
 	let newBoardIds = $state(new Set<string>());
 	let prevBoardIds = new Set<string>();
 	let healthFlash = $state(false);
 	let prevHealth = -1;
+	let activeDropZone = $state<'shop' | 'board' | 'hand' | null>(null);
+	let boardDropTargetIndex = $state<number | null>(null);
+	let dragSource = $state<
+		| {
+				origin: 'shop' | 'board' | 'hand';
+				index: number;
+				name: string;
+		  }
+		| null
+	>(null);
 
 	type AnimPhase = 'idle' | 'animating' | 'done';
 
@@ -43,40 +55,9 @@
 		if (n) send({ type: 'login', name: n });
 	}
 
-	function toggleBoardSelect(i: number) {
-		selectedHandIdx = null;
-		selectedBoardIdx = selectedBoardIdx === i ? null : i;
-	}
-
-	function toggleHandSelect(i: number) {
-		selectedBoardIdx = null;
-		selectedHandIdx = selectedHandIdx === i ? null : i;
-	}
-
-	function sellSelected() {
-		if (selectedBoardIdx === null) return;
-		send({ type: 'sell', board_index: selectedBoardIdx });
-		selectedBoardIdx = null;
-	}
-
-	function playSelected() {
-		if (selectedHandIdx === null) return;
-		send({ type: 'play', hand_index: selectedHandIdx });
-		selectedHandIdx = null;
-	}
-
-	function shiftSelected(dir: -1 | 1) {
-		if (selectedBoardIdx === null || !gs.self) return;
-		const to = selectedBoardIdx + dir;
-		if (to < 0 || to >= gs.self.board.length) return;
-		send({ type: 'reorder', from_index: selectedBoardIdx, to_index: to });
-		selectedBoardIdx = to;
-	}
-
 	function lock() {
 		send({ type: 'lock' });
-		selectedBoardIdx = null;
-		selectedHandIdx = null;
+		clearDragState();
 	}
 
 	function concede() {
@@ -102,9 +83,7 @@
 	});
 
 	$effect(() => {
-		if (!gs.self) return;
-		if (selectedBoardIdx !== null && selectedBoardIdx >= gs.self.board.length) selectedBoardIdx = null;
-		if (selectedHandIdx !== null && selectedHandIdx >= gs.self.hand.length) selectedHandIdx = null;
+		if (gs.phase !== 'buy') clearDragState();
 	});
 
 	$effect(() => {
@@ -156,6 +135,169 @@
 
 	function sleep(ms: number) {
 		return new Promise<void>((r) => setTimeout(r, ms));
+	}
+
+	function clearDragState() {
+		activeDropZone = null;
+		boardDropTargetIndex = null;
+		dragSource = null;
+	}
+
+	function dragShopCard(index: number, minion: MinionSnapshot, event: DragEvent) {
+		if (gs.phase !== 'buy') return;
+		event.dataTransfer?.setData('text/plain', `shop:${index}`);
+		if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+		dragSource = { origin: 'shop', index, name: minion.name };
+		activeDropZone = null;
+	}
+
+	function dragHandCard(index: number, event: DragEvent) {
+		if (gs.phase !== 'buy' || !gs.self) return;
+		const minion = gs.self.hand[index];
+		if (!minion) return;
+		event.dataTransfer?.setData('text/plain', `hand:${index}`);
+		if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+		dragSource = { origin: 'hand', index, name: minion.name };
+		activeDropZone = null;
+	}
+
+	function dragBoardCard(index: number, event: DragEvent) {
+		if (gs.phase !== 'buy' || !gs.self) return;
+		const minion = gs.self.board[index];
+		if (!minion) return;
+		event.dataTransfer?.setData('text/plain', `board:${index}`);
+		if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+		dragSource = { origin: 'board', index, name: minion.name };
+		activeDropZone = null;
+	}
+
+	function dragEnded() {
+		clearDragState();
+	}
+
+	function isHandFull() {
+		return !!gs.self && gs.self.hand.length >= HAND_LIMIT;
+	}
+
+	function isBoardFull() {
+		return !!gs.self && gs.self.board.length >= BOARD_LIMIT;
+	}
+
+	function getDropStatus(zone: 'shop' | 'board' | 'hand') {
+		if (!dragSource || !gs.self) return null;
+
+		if (zone === 'shop') {
+			if (dragSource.origin === 'board') return { valid: true, title: 'Sell to shop', detail: 'Gain 1 gold' };
+			return null;
+		}
+
+		if (zone === 'hand') {
+			if (dragSource.origin !== 'shop') return null;
+			if (isHandFull()) return null;
+			if (gs.self.gold < BUY_COST) return null;
+			return { valid: true, title: 'Buy to hand', detail: `${dragSource.name} will be added to hand` };
+		}
+
+		if (dragSource.origin === 'board') {
+			return null;
+		}
+
+		if (dragSource.origin === 'hand') {
+			if (isBoardFull()) return null;
+			return { valid: true, title: 'Play to board', detail: `${dragSource.name} will be played from hand` };
+		}
+
+		if (dragSource.origin === 'shop') {
+			if (isHandFull()) return null;
+			if (gs.self.gold < BUY_COST) return null;
+			return { valid: true, title: 'Buy to hand', detail: `${dragSource.name} will be bought into hand` };
+		}
+
+		return null;
+	}
+
+	function canDrop(zone: 'shop' | 'board' | 'hand') {
+		if (!dragSource || !gs.self) return false;
+		if (zone === 'shop') return dragSource.origin === 'board';
+		if (zone === 'hand') return dragSource.origin === 'shop' && !isHandFull() && gs.self.gold >= BUY_COST;
+		if (dragSource.origin === 'hand') return !isBoardFull();
+		if (dragSource.origin === 'shop') return !isHandFull() && gs.self.gold >= BUY_COST;
+		return false;
+	}
+
+	function getBoardPreview() {
+		if (!gs.self) return [];
+		if (!dragSource || dragSource.origin !== 'board') return gs.self.board;
+		if (boardDropTargetIndex === null || boardDropTargetIndex === dragSource.index) return gs.self.board;
+
+		const preview = [...gs.self.board];
+		const [moved] = preview.splice(dragSource.index, 1);
+		preview.splice(Math.min(boardDropTargetIndex, preview.length), 0, moved);
+		return preview;
+	}
+
+	function dragOverZone(zone: 'shop' | 'board' | 'hand', event: DragEvent) {
+		if (!dragSource) return;
+		if (!canDrop(zone) && !(zone === 'board' && dragSource.origin === 'board')) return;
+		event.preventDefault();
+		activeDropZone = zone;
+		if (zone !== 'board') boardDropTargetIndex = null;
+	}
+
+	function dragEnterZone(zone: 'shop' | 'board' | 'hand') {
+		if (!dragSource) return;
+		if (!canDrop(zone) && !(zone === 'board' && dragSource.origin === 'board')) return;
+		activeDropZone = zone;
+		if (zone !== 'board') boardDropTargetIndex = null;
+	}
+
+	function dragOverBoardCard(index: number, event: DragEvent) {
+		if (!dragSource) return;
+		if (dragSource.origin !== 'board') return;
+		event.preventDefault();
+		activeDropZone = 'board';
+		boardDropTargetIndex = index;
+	}
+
+	function dropOnBoardCard(index: number, event: DragEvent) {
+		event.preventDefault();
+		if (!dragSource) return;
+		const source = dragSource;
+		const shouldReorder = source.origin === 'board' && source.index !== index;
+		clearDragState();
+		if (!shouldReorder) return;
+		send({ type: 'reorder', from_index: source.index, to_index: index });
+	}
+
+	function dropOnZone(zone: 'shop' | 'board' | 'hand', event: DragEvent) {
+		event.preventDefault();
+		if (!dragSource) return;
+		const source = dragSource;
+		if (zone === 'board' && source.origin === 'board') {
+			const targetIndex = boardDropTargetIndex;
+			clearDragState();
+			if (targetIndex === null || targetIndex === source.index) return;
+			send({ type: 'reorder', from_index: source.index, to_index: targetIndex });
+			return;
+		}
+
+		const status = getDropStatus(zone);
+		clearDragState();
+		if (!status?.valid) return;
+
+		if (zone === 'shop' && source.origin === 'board') {
+			send({ type: 'sell', board_index: source.index });
+			return;
+		}
+
+		if (zone === 'board' && source.origin === 'hand') {
+			send({ type: 'play', hand_index: source.index });
+			return;
+		}
+
+		if ((zone === 'board' || zone === 'hand') && source.origin === 'shop') {
+			send({ type: 'buy', shop_index: source.index });
+		}
 	}
 
 	function updateMinionHealth(id: string, hp: number) {
@@ -327,8 +469,7 @@
 		gs.combatResult = null;
 		gs.matchId = null;
 		gs.opponentName = null;
-		selectedBoardIdx = null;
-		selectedHandIdx = null;
+		clearDragState();
 		animStarted = false;
 		animPhase = 'idle';
 		animText = '';
@@ -422,11 +563,42 @@
 
 		{#if !combatVisible && gs.phase === 'buy'}
 			<div class="buy-layout" class:flash={healthFlash}>
-				<section class="panel shop-panel">
-					<Shop self={gs.self} />
+				<section
+					class="panel shop-panel drop-zone"
+					role="group"
+					aria-label="Shop drop zone"
+					class:dragging={!!dragSource}
+					class:active={activeDropZone === 'shop'}
+					class:valid={!!getDropStatus('shop')}
+					ondragover={(event) => dragOverZone('shop', event)}
+					ondragenter={() => dragEnterZone('shop')}
+					ondrop={(event) => dropOnZone('shop', event)}
+				>
+					<Shop
+						self={gs.self}
+						cardsDraggable={true}
+						oncarddragstart={dragShopCard}
+						oncarddragend={dragEnded}
+					/>
+					{#if getDropStatus('shop')}
+						<div class="drop-overlay">
+							<div class="drop-title">{getDropStatus('shop')?.title}</div>
+							<div class="drop-detail">{getDropStatus('shop')?.detail}</div>
+						</div>
+					{/if}
 				</section>
 
-				<section class="panel board-panel">
+				<section
+					class="panel board-panel drop-zone"
+					role="group"
+					aria-label="Board drop zone"
+					class:dragging={!!dragSource}
+					class:active={activeDropZone === 'board'}
+					class:valid={!!getDropStatus('board')}
+					ondragover={(event) => dragOverZone('board', event)}
+					ondragenter={() => dragEnterZone('board')}
+					ondrop={(event) => dropOnZone('board', event)}
+				>
 					<div class="section-head">
 						<div class="section-kicker">Board</div>
 						<div class="meta-row">
@@ -435,26 +607,36 @@
 						</div>
 					</div>
 					<Board
-						minions={gs.self.board}
+						minions={getBoardPreview()}
 						size="medium"
 						align="center"
 						emptyLabel="Play minions from your hand"
-						selectable={true}
-						selectedIndex={selectedBoardIdx}
+						cardsDraggable={true}
 						newIds={newBoardIds}
-						onselect={toggleBoardSelect}
+						oncarddragstart={dragBoardCard}
+						oncarddragend={dragEnded}
+						oncarddragover={dragOverBoardCard}
+						oncarddrop={dropOnBoardCard}
 					/>
-					{#if selectedBoardIdx !== null}
-						<div class="action-row">
-							<button class="btn sm" onclick={() => shiftSelected(-1)}>← Move</button>
-							<button class="btn sm danger" onclick={sellSelected}>Sell (1g)</button>
-							<button class="btn sm" onclick={() => shiftSelected(1)}>Move →</button>
-							<button class="btn sm ghost" onclick={() => (selectedBoardIdx = null)}>Clear</button>
+					{#if getDropStatus('board')}
+						<div class="drop-overlay">
+							<div class="drop-title">{getDropStatus('board')?.title}</div>
+							<div class="drop-detail">{getDropStatus('board')?.detail}</div>
 						</div>
 					{/if}
 				</section>
 
-				<section class="panel hand-panel">
+				<section
+					class="panel hand-panel drop-zone"
+					role="group"
+					aria-label="Hand drop zone"
+					class:dragging={!!dragSource}
+					class:active={activeDropZone === 'hand'}
+					class:valid={!!getDropStatus('hand')}
+					ondragover={(event) => dragOverZone('hand', event)}
+					ondragenter={() => dragEnterZone('hand')}
+					ondrop={(event) => dropOnZone('hand', event)}
+				>
 					<div class="section-head">
 						<div class="section-kicker">Hand</div>
 						<span class="meta-pill">Cards {gs.self.hand.length}</span>
@@ -464,16 +646,14 @@
 						size="small"
 						align="center"
 						emptyLabel="Buy from the shop to build your hand"
-						selectable={true}
-						selectedIndex={selectedHandIdx}
-						onselect={toggleHandSelect}
+						cardsDraggable={true}
+						oncarddragstart={dragHandCard}
+						oncarddragend={dragEnded}
 					/>
-					{#if selectedHandIdx !== null}
-						<div class="action-row">
-							<button class="btn primary" onclick={playSelected} disabled={gs.self.board.length >= 7}>
-								Play To Board
-							</button>
-							<button class="btn sm ghost" onclick={() => (selectedHandIdx = null)}>Clear</button>
+					{#if getDropStatus('hand')}
+						<div class="drop-overlay">
+							<div class="drop-title">{getDropStatus('hand')?.title}</div>
+							<div class="drop-detail">{getDropStatus('hand')?.detail}</div>
 						</div>
 					{/if}
 				</section>
@@ -650,9 +830,6 @@
 	.btn.primary { background: #6f5632; border-color: #b79258; color: #fff3da; }
 	.btn.primary:hover:not(:disabled) { background: #81653c; }
 	.btn.lg { font-size: 16px; padding: 12px 30px; }
-	.btn.sm { font-size: 12px; padding: 6px 12px; }
-	.btn.danger { border-color: #8a4545; color: #ffd1d1; }
-	.btn.ghost { background: transparent; border-color: #3a444f; color: #b5a992; }
 	.btn.end-turn { background: #26462f; border-color: #5f9d69; color: #e0ffdd; min-width: 140px; }
 	.btn.concede { background: transparent; border-color: transparent; color: #b58f8f; }
 
@@ -740,6 +917,7 @@
 	}
 
 	.panel {
+		position: relative;
 		border-radius: 24px;
 		background: rgba(12, 15, 19, 0.82);
 		border: 1px solid #2f3944;
@@ -753,6 +931,50 @@
 	.shop-panel { align-items: center; }
 	.board-panel { min-height: 220px; }
 	.hand-panel  { min-height: 160px; }
+	.drop-zone.dragging {
+		transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+	}
+	.drop-zone.dragging.valid {
+		border-color: #4d8b5f;
+		box-shadow: inset 0 0 0 1px #4d8b5f55;
+	}
+	.drop-zone.dragging.active.valid {
+		background: rgba(14, 34, 18, 0.9);
+		box-shadow:
+			inset 0 0 0 1px #71c18699,
+			0 0 0 1px #71c18644;
+	}
+	.drop-overlay {
+		position: absolute;
+		inset: 12px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		padding: 16px;
+		border-radius: 18px;
+		background: rgba(9, 11, 15, 0.82);
+		border: 1px dashed #485463;
+		backdrop-filter: blur(6px);
+		pointer-events: none;
+		text-align: center;
+		z-index: 5;
+	}
+	.drop-zone.valid .drop-overlay {
+		border-color: #71c186;
+		color: #d8ffdf;
+	}
+	.drop-title {
+		font-size: 15px;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+	}
+	.drop-detail {
+		font-size: 12px;
+		color: #c4cdd8;
+		max-width: 28ch;
+	}
 
 	.section-head {
 		display: flex;
@@ -767,14 +989,13 @@
 		text-transform: uppercase;
 		color: #b5a992;
 	}
-	.meta-row, .action-row {
+	.meta-row {
 		display: flex;
 		align-items: center;
 		gap: 10px;
 		flex-wrap: wrap;
 	}
 	.meta-pill.gold { color: #ffd87a; border-color: #7f6330; }
-	.action-row { justify-content: center; }
 
 	.battle-arena {
 		position: relative;

@@ -5,6 +5,7 @@
 		minion: MinionSnapshot;
 		cardId?: string;
 		size?: 'small' | 'medium' | 'large';
+		draggable?: boolean;
 		selected?: boolean;
 		highlighted?: boolean;
 		attacking?: boolean;
@@ -17,12 +18,15 @@
 		isNew?: boolean;
 		lungeStyle?: string;
 		onclick?: () => void;
+		ondragstart?: (event: DragEvent) => void;
+		ondragend?: (event: DragEvent) => void;
 	}
 
 	let {
 		minion,
 		cardId = undefined,
 		size = 'medium',
+		draggable = false,
 		selected = false,
 		highlighted = false,
 		attacking = false,
@@ -34,7 +38,9 @@
 		dying = false,
 		isNew = false,
 		lungeStyle = '',
-		onclick
+		onclick,
+		ondragstart,
+		ondragend
 	}: Props = $props();
 </script>
 
@@ -44,6 +50,7 @@
 	class:size-small={size === 'small'}
 	class:size-medium={size === 'medium'}
 	class:size-large={size === 'large'}
+	class:draggable
 	class:selected
 	class:taunt={minion.keywords.includes('taunt')}
 	class:divine={minion.divine_shield}
@@ -57,7 +64,10 @@
 	class:dying
 	class:is-new={isNew}
 	style={lungeStyle}
+	{draggable}
 	{onclick}
+	{ondragstart}
+	{ondragend}
 	title={minion.name}
 >
 	{#if showHealthLeft}
@@ -98,7 +108,7 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 6px;
-		cursor: pointer;
+		cursor: default;
 		font-family: inherit;
 		color: #e0e0e0;
 		/* transform transition drives the JS-controlled lunge */
@@ -107,6 +117,18 @@
 			transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94),
 			opacity 0.4s,
 			box-shadow 0.2s;
+	}
+
+	.minion-card[onclick] {
+		cursor: pointer;
+	}
+
+	.minion-card.draggable {
+		cursor: grab;
+	}
+
+	.minion-card.draggable:active {
+		cursor: grabbing;
 	}
 
 	.minion-card:hover {

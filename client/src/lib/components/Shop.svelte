@@ -6,13 +6,17 @@
 
 	interface Props {
 		self: SelfSnapshot;
+		cardsDraggable?: boolean;
+		oncarddragstart?: (index: number, minion: MinionSnapshot, event: DragEvent) => void;
+		oncarddragend?: (event: DragEvent) => void;
 	}
 
-	let { self }: Props = $props();
-
-	function buy(idx: number) {
-		send({ type: 'buy', shop_index: idx });
-	}
+	let {
+		self,
+		cardsDraggable = false,
+		oncarddragstart,
+		oncarddragend
+	}: Props = $props();
 
 	function refresh() {
 		send({ type: 'refresh' });
@@ -38,7 +42,13 @@
 		{#each self.shop as slot, i}
 			{#if slot}
 				<div class="shop-slot">
-					<MinionCard minion={slot} size="large" onclick={() => buy(i)} />
+					<MinionCard
+						minion={slot}
+						size="large"
+						draggable={cardsDraggable}
+						ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, slot, event) : undefined}
+						ondragend={cardsDraggable ? oncarddragend : undefined}
+					/>
 					<div class="buy-cost">3g</div>
 				</div>
 			{:else}
