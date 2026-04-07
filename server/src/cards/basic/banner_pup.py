@@ -7,16 +7,16 @@ from ...player import BuyContext
 def battlecry(minion: Minion, event: PlayEvent, ctx: BuyContext) -> None:
     if not ctx.is_self(minion, event.subject):
         return
-    targets: list[Minion] = [m for m in ctx.player.board if m.instance_id != minion.instance_id]
+    targets = [m for m in ctx.player.board if m.instance_id != minion.instance_id]
     if targets:
-        target: Minion = ctx.rng.choice(targets)
-        ctx.buff(target, attack=1, health=1)
+        ctx.buff(ctx.rng.choice(targets), attack=1, health=1)
+
 
 CARD = CardDef(
-    id="rally_hound",
-    name="Rally Hound",
+    id="banner_pup",
+    name="Banner Pup",
     base_attack=2,
-    base_health=2,
+    base_health=3,
     tier=2,
     description="Battlecry: Give another random friendly minion +1/+1.",
     on_play=battlecry,

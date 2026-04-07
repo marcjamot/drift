@@ -6,7 +6,7 @@ import random
 import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-from ..cards.catalog import CARD_CATALOG
+from ..cards.catalog import SHOP_CARDS
 from ..cards.pool import CardPool
 from ..player import PlayerState
 from .phases.base import Phase
@@ -55,7 +55,7 @@ class Match:
         self.winner: Optional[str] = None
 
         self.pool: CardPool = CardPool(
-            list(CARD_CATALOG.values()), random.Random(self.seed ^ 0xDEAD)
+            SHOP_CARDS, random.Random(self.seed ^ 0xDEAD)
         )
 
         self._senders: Dict[str, Sender] = {}

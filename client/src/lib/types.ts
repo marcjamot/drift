@@ -2,6 +2,7 @@ export interface MinionSnapshot {
 	instance_id: string;
 	card_id: string;
 	name: string;
+	description: string;
 	attack: number;
 	health: number;
 	max_health: number;
@@ -35,7 +36,7 @@ export interface OpponentSnapshot {
 	board: MinionSnapshot[];
 }
 
-export type Phase = 'buy' | 'combat' | 'game_over';
+export type Phase = "buy" | "combat" | "game_over";
 
 export interface CombatEvent {
 	type: string;
@@ -49,7 +50,7 @@ export interface CombatMeta {
 }
 
 export interface CombatResultMsg {
-	type: 'combat_result';
+	type: "combat_result";
 	round: number;
 	winner_player: string | null;
 	damage: number;
@@ -57,15 +58,15 @@ export interface CombatResultMsg {
 }
 
 export type Intent =
-	| { type: 'login'; name: string }
-	| { type: 'reconnect'; player_id: string }
-	| { type: 'queue' }
-	| { type: 'buy'; shop_index: number }
-	| { type: 'play'; hand_index: number }
-	| { type: 'sell'; board_index: number }
-	| { type: 'reorder'; from_index: number; to_index: number }
-	| { type: 'freeze' }
-	| { type: 'refresh' }
-	| { type: 'upgrade' }
-	| { type: 'lock' }
-	| { type: 'concede' };
+	| { type: "login"; name: string }
+	| { type: "reconnect"; player_id: string }
+	| { type: "queue" }
+	| { type: "buy"; shop_index: number }
+	| { type: "play"; hand_index: number }
+	| { type: "sell"; board_index: number }
+	| { type: "reorder"; from_index: number; to_index: number }
+	| { type: "freeze" }
+	| { type: "refresh" }
+	| { type: "upgrade" }
+	| { type: "lock" }
+	| { type: "concede" };

@@ -5,17 +5,16 @@ from ...combat import CombatContext
 
 
 def deathrattle(minion: Minion, event: DeathEvent, ctx: CombatContext) -> None:
-    if not ctx.is_self(minion, event.subject):
-        return
-    for enemy in list(ctx.enemy_board):
-        ctx.deal_damage(enemy, 1)
+    if ctx.is_self(minion, event.subject):
+        ctx.summon("ember")
+
 
 CARD = CardDef(
-    id="bomb_bot",
-    name="Bomb Bot",
+    id="ashen_rat",
+    name="Ashen Rat",
     base_attack=2,
     base_health=1,
     tier=1,
-    description="Deathrattle: Deal 1 damage to all enemy minions.",
+    description="Deathrattle: Summon a 1/1 Ember.",
     on_death=deathrattle,
 )

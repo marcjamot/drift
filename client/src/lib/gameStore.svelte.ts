@@ -1,15 +1,7 @@
-import type {
-	CombatEvent,
-	CombatMeta,
-	CombatResultMsg,
-	Intent,
-	OpponentSnapshot,
-	Phase,
-	SelfSnapshot
-} from './types.js';
+import type { CombatEvent, CombatMeta, CombatResultMsg, Intent, OpponentSnapshot, Phase, SelfSnapshot } from "./types.js";
 
 export const gs = $state({
-	screen: 'login' as 'login' | 'queued' | 'game' | 'game_over',
+	screen: "login" as "login" | "queued" | "game" | "game_over",
 
 	playerId: null as string | null,
 	playerName: null as string | null,
@@ -26,7 +18,7 @@ export const gs = $state({
 	combatResult: null as CombatResultMsg | null,
 	error: null as string | null,
 	gameOverWinner: null as string | null,
-	connected: false
+	connected: false,
 });
 
 let _frozenRound = -1;
@@ -35,15 +27,15 @@ let _frozenOpponent: OpponentSnapshot | null = null;
 let ws: WebSocket | null = null;
 let buyTimerHandle: number | null = null;
 
-export function connect(url = 'ws://localhost:8765') {
+export function connect(url = "ws://localhost:8765") {
 	if (ws) return;
 	ws = new WebSocket(url);
 
 	ws.onopen = () => {
 		gs.connected = true;
 		gs.error = null;
-		const stored = localStorage.getItem('drift_player_id');
-		if (stored) send({ type: 'reconnect', player_id: stored });
+		const stored = localStorage.getItem("drift_player_id");
+		if (stored) send({ type: "reconnect", player_id: stored });
 	};
 
 	ws.onclose = () => {
@@ -53,7 +45,7 @@ export function connect(url = 'ws://localhost:8765') {
 	};
 
 	ws.onerror = () => {
-		gs.error = 'Connection error';
+		gs.error = "Connection error";
 	};
 
 	ws.onmessage = (ev) => {
@@ -82,7 +74,7 @@ function startBuyTimer() {
 	stopBuyTimer();
 	if (gs.buySecondsLeft === null) return;
 	buyTimerHandle = window.setInterval(() => {
-		if (gs.phase !== 'buy' || gs.buySecondsLeft === null) {
+		if (gs.phase !== "buy" || gs.buySecondsLeft === null) {
 			stopBuyTimer();
 			return;
 		}
@@ -92,25 +84,25 @@ function startBuyTimer() {
 
 function handle(msg: Record<string, unknown>) {
 	switch (msg.type as string) {
-		case 'welcome':
+		case "welcome":
 			gs.playerId = msg.player_id as string;
 			gs.playerName = msg.name as string;
-			localStorage.setItem('drift_player_id', gs.playerId);
+			localStorage.setItem("drift_player_id", gs.playerId);
 			return;
 
-		case 'reconnected':
+		case "reconnected":
 			gs.playerId = msg.player_id as string;
-			gs.screen = 'game';
+			gs.screen = "game";
 			return;
 
-		case 'queued':
-			gs.screen = 'queued';
+		case "queued":
+			gs.screen = "queued";
 			return;
 
-		case 'match_start':
+		case "match_start":
 			gs.matchId = msg.match_id as string;
 			gs.opponentName = msg.opponent as string;
-			gs.screen = 'game';
+			gs.screen = "game";
 			gs.buySecondsLeft = null;
 			gs.combatLog = [];
 			gs.combatMeta = null;
@@ -119,17 +111,17 @@ function handle(msg: Record<string, unknown>) {
 			_frozenOpponent = null;
 			return;
 
-		case 'state': {
+		case "state": {
 			const round = msg.round as number;
 			const phase = msg.phase as Phase;
 			gs.round = round;
 			gs.phase = phase;
-			gs.screen = phase === 'game_over' ? 'game_over' : 'game';
-			gs.gameOverWinner = phase === 'game_over' ? ((msg.winner as string | null) ?? null) : null;
-			gs.buySecondsLeft = phase === 'buy' ? (msg.buy_seconds_left as number | null) : null;
+			gs.screen = phase === "game_over" ? "game_over" : "game";
+			gs.gameOverWinner = phase === "game_over" ? ((msg.winner as string | null) ?? null) : null;
+			gs.buySecondsLeft = phase === "buy" ? (msg.buy_seconds_left as number | null) : null;
 			gs.self = msg.self as SelfSnapshot;
 
-			if (phase === 'buy') {
+			if (phase === "buy") {
 				startBuyTimer();
 				if (round !== _frozenRound) {
 					_frozenRound = round;
@@ -143,8 +135,8 @@ function handle(msg: Record<string, unknown>) {
 			return;
 		}
 
-		case 'combat_start':
-			gs.phase = 'combat';
+		case "combat_start":
+			gs.phase = "combat";
 			gs.buySecondsLeft = null;
 			stopBuyTimer();
 			gs.combatLog = [];
@@ -152,29 +144,29 @@ function handle(msg: Record<string, unknown>) {
 			gs.combatResult = null;
 			return;
 
-		case 'combat_log':
+		case "combat_log":
 			gs.combatMeta = {
 				players: msg.players as [string, string],
-				initial_a: msg.initial_a as import('./types.js').MinionSnapshot[],
-				initial_b: msg.initial_b as import('./types.js').MinionSnapshot[]
+				initial_a: msg.initial_a as import("./types.js").MinionSnapshot[],
+				initial_b: msg.initial_b as import("./types.js").MinionSnapshot[],
 			};
 			gs.combatLog = msg.events as CombatEvent[];
 			return;
 
-		case 'combat_result':
+		case "combat_result":
 			gs.combatResult = msg as unknown as CombatResultMsg;
 			return;
 
-		case 'game_over':
+		case "game_over":
 			gs.gameOverWinner = msg.winner as string;
-			gs.screen = 'game_over';
+			gs.screen = "game_over";
 			gs.buySecondsLeft = null;
 			stopBuyTimer();
 			return;
 
-		case 'error':
-			if (msg.message === 'unknown player_id') {
-				localStorage.removeItem('drift_player_id');
+		case "error":
+			if (msg.message === "unknown player_id") {
+				localStorage.removeItem("drift_player_id");
 				gs.playerId = null;
 				return;
 			}
@@ -182,7 +174,7 @@ function handle(msg: Record<string, unknown>) {
 			setTimeout(() => (gs.error = null), 4000);
 			return;
 
-		case 'action_result':
+		case "action_result":
 			if (msg.error) {
 				gs.error = msg.error as string;
 				setTimeout(() => (gs.error = null), 3000);

@@ -113,6 +113,7 @@ class Minion:
 
     card_id: str
     name: str
+    description: str
     attack: int
     health: int
     max_health: int
@@ -138,6 +139,7 @@ class Minion:
             "instance_id": self.instance_id,
             "card_id": self.card_id,
             "name": self.name,
+            "description": self.description,
             "attack": self.attack,
             "health": self.health,
             "max_health": self.max_health,
@@ -178,6 +180,7 @@ class CardDef:
         return Minion(
             card_id=self.id,
             name=self.name,
+            description=self.description,
             attack=self.base_attack,
             health=self.base_health,
             max_health=self.base_health,

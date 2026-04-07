@@ -7,15 +7,17 @@ from ...combat import CombatContext
 def deathrattle(minion: Minion, event: DeathEvent, ctx: CombatContext) -> None:
     if not ctx.is_self(minion, event.subject):
         return
-    for enemy in list(ctx.enemy_board):
-        ctx.deal_damage(enemy, 1)
+    if ctx.enemy_board:
+        ctx.deal_damage(ctx.enemy_board[0], 2)
+
 
 CARD = CardDef(
-    id="bomb_bot",
-    name="Bomb Bot",
-    base_attack=2,
-    base_health=1,
-    tier=1,
-    description="Deathrattle: Deal 1 damage to all enemy minions.",
+    id="siege_golem",
+    name="Siege Golem",
+    base_attack=5,
+    base_health=6,
+    tier=4,
+    keywords=["taunt"],
+    description="Taunt. Deathrattle: Deal 2 damage to the left-most enemy minion.",
     on_death=deathrattle,
 )

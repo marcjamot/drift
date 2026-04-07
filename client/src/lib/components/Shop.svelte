@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { MinionSnapshot } from '../types.js';
-	import type { SelfSnapshot } from '../types.js';
-	import MinionCard from './MinionCard.svelte';
-	import { send } from '../gameStore.svelte.js';
+	import type { MinionSnapshot } from "../types.js";
+	import type { SelfSnapshot } from "../types.js";
+	import MinionCard from "./MinionCard.svelte";
+	import { send } from "../gameStore.svelte.js";
 
 	interface Props {
 		self: SelfSnapshot;
@@ -11,23 +11,18 @@
 		oncarddragend?: (event: DragEvent) => void;
 	}
 
-	let {
-		self,
-		cardsDraggable = false,
-		oncarddragstart,
-		oncarddragend
-	}: Props = $props();
+	let { self, cardsDraggable = false, oncarddragstart, oncarddragend }: Props = $props();
 
 	function refresh() {
-		send({ type: 'refresh' });
+		send({ type: "refresh" });
 	}
 
 	function freeze() {
-		send({ type: 'freeze' });
+		send({ type: "freeze" });
 	}
 
 	function upgrade() {
-		send({ type: 'upgrade' });
+		send({ type: "upgrade" });
 	}
 </script>
 
@@ -39,7 +34,7 @@
 	</div>
 
 	<div class="shop-row">
-		{#each self.shop as slot, i}
+		{#each self.shop as slot, i (`${slot?.instance_id ?? "empty"}-${i}`)}
 			{#if slot}
 				<div class="shop-slot">
 					<MinionCard
@@ -58,9 +53,7 @@
 	</div>
 
 	<div class="shop-actions">
-		<button onclick={refresh} disabled={self.gold < 1} class="btn">
-			Refresh (1g)
-		</button>
+		<button onclick={refresh} disabled={self.gold < 1} class="btn"> Refresh (1g) </button>
 
 		{#if self.tavern_tier < 6}
 			<button onclick={upgrade} disabled={self.gold < self.upgrade_cost} class="btn upgrade">
@@ -71,7 +64,7 @@
 		{/if}
 
 		<button onclick={freeze} class="btn" class:frozen={self.frozen}>
-			{self.frozen ? '❄ Frozen' : 'Freeze'}
+			{self.frozen ? "❄ Frozen" : "Freeze"}
 		</button>
 	</div>
 </div>
@@ -149,7 +142,9 @@
 		background: #1e1e2e;
 		color: #ccc;
 		cursor: pointer;
-		transition: background 0.1s, border-color 0.1s;
+		transition:
+			background 0.1s,
+			border-color 0.1s;
 	}
 	.btn:hover:not(:disabled) {
 		background: #2a2a3a;

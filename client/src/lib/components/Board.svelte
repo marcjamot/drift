@@ -1,21 +1,19 @@
 <script lang="ts">
-	import type { MinionSnapshot } from '../types.js';
-	import MinionCard from './MinionCard.svelte';
+	import type { MinionSnapshot } from "../types.js";
+	import MinionCard from "./MinionCard.svelte";
 
 	interface Props {
 		minions: MinionSnapshot[];
 		label?: string;
-		size?: 'small' | 'medium' | 'large';
+		size?: "small" | "medium" | "large";
 		cardsDraggable?: boolean;
-		align?: 'start' | 'center';
+		align?: "start" | "center";
 		emptyLabel?: string;
 		selectable?: boolean;
 		selectedIndex?: number | null;
-		highlightIds?: Set<string>;
-		attackingIds?: Set<string>;
 		strickenIds?: Set<string>;
 		impactIds?: Set<string>;
-		attackDirection?: 'up' | 'down';
+		attackDirection?: "up" | "down";
 		showHealthLeft?: boolean;
 		dyingIds?: Set<string>;
 		newIds?: Set<string>;
@@ -32,18 +30,16 @@
 
 	let {
 		minions,
-		label = '',
-		size = 'medium',
+		label = "",
+		size = "medium",
 		cardsDraggable = false,
-		align = 'center',
-		emptyLabel = 'empty',
+		align = "center",
+		emptyLabel = "empty",
 		selectable = false,
 		selectedIndex = null,
-		highlightIds = new Set(),
-		attackingIds = new Set(),
 		strickenIds = new Set(),
 		impactIds = new Set(),
-		attackDirection = 'up',
+		attackDirection = "up",
 		showHealthLeft = false,
 		dyingIds = new Set(),
 		newIds = new Set(),
@@ -53,7 +49,7 @@
 		oncarddragstart,
 		oncarddragend,
 		oncarddragover,
-		oncarddrop
+		oncarddrop,
 	}: Props = $props();
 </script>
 
@@ -61,7 +57,7 @@
 	{#if label}
 		<div class="board-label">{label}</div>
 	{/if}
-	<div class="board" class:centered={align === 'center'} class:bare>
+	<div class="board" class:centered={align === "center"} class:bare>
 		{#each minions as minion, i (minion.instance_id)}
 			<div
 				class="card-slot"
@@ -76,15 +72,13 @@
 					{size}
 					draggable={cardsDraggable}
 					selected={selectedIndex === i}
-					highlighted={highlightIds.has(minion.instance_id)}
-					attacking={attackingIds.has(minion.instance_id)}
 					stricken={strickenIds.has(minion.instance_id)}
 					impact={impactIds.has(minion.instance_id)}
 					{attackDirection}
 					{showHealthLeft}
 					dying={dyingIds.has(minion.instance_id)}
 					isNew={newIds.has(minion.instance_id)}
-					lungeStyle={cardStyles.get(minion.instance_id) ?? ''}
+					lungeStyle={cardStyles.get(minion.instance_id) ?? ""}
 					onclick={selectable ? () => onselect?.(i) : undefined}
 					ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, event) : undefined}
 					ondragend={cardsDraggable ? oncarddragend : undefined}

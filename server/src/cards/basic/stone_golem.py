@@ -7,5 +7,5 @@ CARD = CardDef(
     base_attack=2,
     base_health=3,
     tier=1,
-    description="A sturdy minion.",
+    description="No ability.",
 )

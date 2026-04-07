@@ -42,6 +42,7 @@ class CombatContext:
                 "target_name": minion.name,
                 "amount": actual,
                 "remaining_health": minion.health,
+                "remaining_divine_shield": minion.divine_shield,
             }
         )
         return actual
@@ -379,9 +380,11 @@ def resolve_combat(
                 "type": "damage_dealt",
                 "attacker_id": attacker.instance_id,
                 "attacker_remaining_hp": attacker.health,
+                "attacker_divine_shield": attacker.divine_shield,
                 "damage_to_attacker": damage_to_attacker,
                 "defender_id": defender.instance_id,
                 "defender_remaining_hp": defender.health,
+                "defender_divine_shield": defender.divine_shield,
                 "damage_to_defender": damage_to_defender,
             }
         )

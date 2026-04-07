@@ -11,7 +11,7 @@
 </script>
 
 <div class="player-info" class:self={isSelf} class:locked>
-	<span class="name">{name}{isSelf ? ' (you)' : ''}</span>
+	<span class="name">{name}{isSelf ? " (you)" : ""}</span>
 	<span class="hp" class:low={health <= 15}>♥ {health}</span>
 	<span class="tier">T{tier}</span>
 	{#if locked}

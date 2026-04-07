@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CombatEvent, CombatResultMsg } from '../types.js';
+	import type { CombatEvent, CombatResultMsg } from "../types.js";
 
 	interface Props {
 		events: CombatEvent[];
@@ -11,20 +11,20 @@
 
 	function describe(e: CombatEvent): string {
 		switch (e.type) {
-			case 'attack':
+			case "attack":
 				return `${e.attacker_name} attacks ${e.defender_name}`;
-			case 'damage_dealt': {
+			case "damage_dealt": {
 				const attackerHp = e.attacker_remaining_hp as number;
 				const defenderHp = e.defender_remaining_hp as number;
-				return `  → ${attackerHp >= 0 ? `attacker ${attackerHp}hp` : ''} / ${defenderHp >= 0 ? `defender ${defenderHp}hp` : ''}`;
+				return `  → ${attackerHp >= 0 ? `attacker ${attackerHp}hp` : ""} / ${defenderHp >= 0 ? `defender ${defenderHp}hp` : ""}`;
 			}
-			case 'death':
+			case "death":
 				return `💀 ${e.minion_name} dies`;
-			case 'buff':
+			case "buff":
 				return `✨ ${e.target_name} +${e.attack}/+${e.health}`;
-			case 'summon':
+			case "summon":
 				return `➕ ${e.minion_name} summoned`;
-			case 'damage':
+			case "damage":
 				return `  ⚡ ${e.target_name} takes ${e.amount} (→ ${e.remaining_health}hp)`;
 			default:
 				return `[${e.type}]`;
@@ -35,8 +35,8 @@
 <div class="combat-log">
 	<div class="log-title">Combat log</div>
 	<div class="log-scroll">
-		{#each events as e}
-			<div class="log-line" class:death={e.type === 'death'}>
+		{#each events as e, i (`${e.type}-${i}`)}
+			<div class="log-line" class:death={e.type === "death"}>
 				{describe(e)}
 			</div>
 		{/each}
@@ -45,7 +45,11 @@
 		{/if}
 	</div>
 	{#if result}
-		<div class="result" class:win={result.winner_player === selfId} class:loss={result.winner_player !== selfId && result.winner_player !== null}>
+		<div
+			class="result"
+			class:win={result.winner_player === selfId}
+			class:loss={result.winner_player !== selfId && result.winner_player !== null}
+		>
 			{#if result.winner_player === null}
 				Tie!
 			{:else if result.winner_player === selfId}

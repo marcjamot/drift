@@ -1,17 +1,15 @@
 <script lang="ts">
-	import type { MinionSnapshot } from '../types.js';
+	import type { MinionSnapshot } from "../types.js";
 
 	interface Props {
 		minion: MinionSnapshot;
 		cardId?: string;
-		size?: 'small' | 'medium' | 'large';
+		size?: "small" | "medium" | "large";
 		draggable?: boolean;
 		selected?: boolean;
-		highlighted?: boolean;
-		attacking?: boolean;
 		stricken?: boolean;
 		impact?: boolean;
-		attackDirection?: 'up' | 'down';
+		attackDirection?: "up" | "down";
 		showHealthLeft?: boolean;
 		dying?: boolean;
 		isNew?: boolean;
@@ -24,40 +22,36 @@
 	let {
 		minion,
 		cardId = undefined,
-		size = 'medium',
+		size = "medium",
 		draggable = false,
 		selected = false,
-		highlighted = false,
-		attacking = false,
 		stricken = false,
 		impact = false,
-		attackDirection = 'up',
+		attackDirection = "up",
 		showHealthLeft = false,
 		dying = false,
 		isNew = false,
-		lungeStyle = '',
+		lungeStyle = "",
 		onclick,
 		ondragstart,
-		ondragend
+		ondragend,
 	}: Props = $props();
 </script>
 
 <button
 	id={cardId}
 	class="minion-card"
-	class:size-small={size === 'small'}
-	class:size-medium={size === 'medium'}
-	class:size-large={size === 'large'}
+	class:size-small={size === "small"}
+	class:size-medium={size === "medium"}
+	class:size-large={size === "large"}
 	class:draggable
 	class:selected
-	class:taunt={minion.keywords.includes('taunt')}
+	class:taunt={minion.keywords.includes("taunt")}
 	class:divine={minion.divine_shield}
-	class:highlighted
-	class:attacking
 	class:stricken
 	class:impact
-	class:attack-up={attackDirection === 'up'}
-	class:attack-down={attackDirection === 'down'}
+	class:attack-up={attackDirection === "up"}
+	class:attack-down={attackDirection === "down"}
 	class:dying
 	class:is-new={isNew}
 	style={lungeStyle}
@@ -65,7 +59,6 @@
 	{onclick}
 	{ondragstart}
 	{ondragend}
-	title={minion.name}
 >
 	{#if showHealthLeft}
 		<div class="health-left" class:low={minion.health <= 2}>
@@ -75,7 +68,7 @@
 	{/if}
 	<div class="name">{minion.name}</div>
 	<div class="keywords">
-		{#each minion.keywords as kw}
+		{#each minion.keywords as kw (kw)}
 			<span class="keyword">{kw}</span>
 		{/each}
 		{#if minion.divine_shield}
@@ -90,6 +83,9 @@
 		</span>
 	</div>
 	{#if minion.golden}<div class="star">★</div>{/if}
+	{#if minion.description}
+		<div class="tooltip">{minion.description}</div>
+	{/if}
 </button>
 
 <style>
@@ -114,6 +110,7 @@
 			transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94),
 			opacity 0.4s,
 			box-shadow 0.2s;
+		overflow: visible;
 	}
 
 	.minion-card[onclick] {
@@ -133,6 +130,43 @@
 		transform: translateY(-3px);
 	}
 
+	.tooltip {
+		position: absolute;
+		left: 50%;
+		bottom: calc(100% + 10px);
+		transform: translateX(-50%) translateY(6px);
+		width: min(220px, 70vw);
+		padding: 8px 10px;
+		border-radius: 10px;
+		background: rgba(11, 13, 18, 0.96);
+		border: 1px solid #46505f;
+		box-shadow: 0 10px 24px #00000066;
+		color: #d9dfeb;
+		font-size: 11px;
+		line-height: 1.35;
+		text-align: center;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.12s ease, transform 0.12s ease;
+		z-index: 40;
+	}
+
+	.tooltip::after {
+		content: "";
+		position: absolute;
+		left: 50%;
+		top: 100%;
+		transform: translateX(-50%);
+		border: 6px solid transparent;
+		border-top-color: #46505f;
+	}
+
+	.minion-card:hover .tooltip,
+	.minion-card:focus-visible .tooltip {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
+
 	.minion-card.selected {
 		border-color: #d4a020;
 		box-shadow: 0 0 10px #d4a02055;
@@ -144,23 +178,6 @@
 		border-color: #6090d0;
 		box-shadow: 0 0 8px #6090d033;
 	}
-	.minion-card.highlighted {
-		border-color: #4b88ff;
-		box-shadow: 0 0 16px #4b88ff66;
-	}
-
-	/* Attacking: glow + elevated z so the card lunges above everything */
-	.minion-card.attacking {
-		border-color: #4b88ff;
-		box-shadow: 0 0 22px #4b88ffaa;
-		z-index: 20;
-		/* fast transition when lunging so it snaps to target quickly */
-		transition:
-			border-color 0.15s,
-			transform 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-			box-shadow 0.2s;
-	}
-
 	/* Shake when struck */
 	.minion-card.stricken {
 		animation: struck-shake 0.38s ease-in-out;
@@ -193,18 +210,39 @@
 	}
 
 	@keyframes struck-shake {
-		0%   { transform: translateX(0); }
-		18%  { transform: translateX(-7px); }
-		36%  { transform: translateX(7px); }
-		54%  { transform: translateX(-5px); }
-		72%  { transform: translateX(5px); }
-		100% { transform: translateX(0); }
+		0% {
+			transform: translateX(0);
+		}
+		18% {
+			transform: translateX(-7px);
+		}
+		36% {
+			transform: translateX(7px);
+		}
+		54% {
+			transform: translateX(-5px);
+		}
+		72% {
+			transform: translateX(5px);
+		}
+		100% {
+			transform: translateX(0);
+		}
 	}
 
 	@keyframes impact-flash {
-		0%   { box-shadow: 0 0 0   0   transparent; filter: brightness(1); }
-		22%  { box-shadow: 0 0 32px 10px #ff8c3099; filter: brightness(1.6); }
-		100% { box-shadow: none;                    filter: brightness(1); }
+		0% {
+			box-shadow: 0 0 0 0 transparent;
+			filter: brightness(1);
+		}
+		22% {
+			box-shadow: 0 0 32px 10px #ff8c3099;
+			filter: brightness(1.6);
+		}
+		100% {
+			box-shadow: none;
+			filter: brightness(1);
+		}
 	}
 
 	.minion-card.size-small {
