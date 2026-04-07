@@ -10,6 +10,7 @@
 	const BUY_COST = 3;
 	const HAND_LIMIT = 10;
 	const BOARD_LIMIT = 7;
+	const COMBAT_RESULT_HOLD_MS = 1400;
 
 	let nameInput = $state('');
 	let concedeArmed = $state(false);
@@ -36,7 +37,6 @@
 	let animOppBoard = $state<MinionSnapshot[]>([]);
 	let animHighlights = $state(new Set<string>());
 	let animAttackers = $state(new Set<string>());
-	let animTargets = $state(new Set<string>());
 	let animStricken = $state(new Set<string>());
 	let animImpact = $state(new Set<string>());
 	let animDying = $state(new Set<string>());
@@ -45,10 +45,11 @@
 	let animText = $state('');
 	let animStarted = false;
 
-	type DmgNumber = { id: number; value: number; x: number; y: number; enemy: boolean };
+	type DmgNumber = { id: number; cardId: string; value: number; x: number; y: number; enemy: boolean };
 	let dmgNumbers = $state<DmgNumber[]>([]);
 	let dmgSeq = 0;
 	let arenaEl = $state<HTMLElement | null>(null);
+	const dmgTimeouts = new Map<string, number>();
 
 	function login() {
 		const n = nameInput.trim();
@@ -116,25 +117,35 @@
 	$effect(() => {
 		if (gs.phase !== 'buy') return;
 		if (animPhase === 'idle') return;
-		animStarted = false;
-		animPhase = 'idle';
-		animText = '';
-		animHighlights = new Set();
-		animAttackers = new Set();
-		animTargets = new Set();
-		animStricken = new Set();
-		animImpact = new Set();
-		animDying = new Set();
-		animNewIds = new Set();
-		animCardStyles = new Map();
-		dmgNumbers = [];
-		gs.combatLog = [];
-		gs.combatMeta = null;
-		gs.combatResult = null;
+		if (animPhase === 'animating') return;
+		if (!gs.combatResult) return;
+		const resetTimer = setTimeout(() => {
+			animStarted = false;
+			animPhase = 'idle';
+			animText = '';
+			animHighlights = new Set();
+			animAttackers = new Set();
+			animStricken = new Set();
+			animImpact = new Set();
+			animDying = new Set();
+			animNewIds = new Set();
+			animCardStyles = new Map();
+			clearDamageNumbers();
+			gs.combatLog = [];
+			gs.combatMeta = null;
+			gs.combatResult = null;
+		}, COMBAT_RESULT_HOLD_MS);
+		return () => clearTimeout(resetTimer);
 	});
 
 	function sleep(ms: number) {
 		return new Promise<void>((r) => setTimeout(r, ms));
+	}
+
+	function clearDamageNumbers() {
+		for (const timeout of dmgTimeouts.values()) clearTimeout(timeout);
+		dmgTimeouts.clear();
+		dmgNumbers = [];
 	}
 
 	function clearDragState() {
@@ -333,9 +344,22 @@
 		const aR = arenaEl.getBoundingClientRect();
 		const x = cR.left + cR.width / 2 - aR.left;
 		const y = cR.top - aR.top + 10;
-		const id = ++dmgSeq;
-		dmgNumbers = [...dmgNumbers, { id, value, x, y, enemy: isEnemyCard }];
-		setTimeout(() => { dmgNumbers = dmgNumbers.filter((n) => n.id !== id); }, 950);
+		const existing = dmgNumbers.find((n) => n.cardId === cardId);
+		if (existing) {
+			dmgNumbers = dmgNumbers.map((n) =>
+				n.cardId === cardId ? { ...n, value: n.value + value, x, y, enemy: isEnemyCard } : n
+			);
+		} else {
+			const id = ++dmgSeq;
+			dmgNumbers = [...dmgNumbers, { id, cardId, value, x, y, enemy: isEnemyCard }];
+		}
+		const prevTimeout = dmgTimeouts.get(cardId);
+		if (prevTimeout !== undefined) clearTimeout(prevTimeout);
+		const timeout = window.setTimeout(() => {
+			dmgNumbers = dmgNumbers.filter((n) => n.cardId !== cardId);
+			dmgTimeouts.delete(cardId);
+		}, 950);
+		dmgTimeouts.set(cardId, timeout);
 	}
 
 	async function runCombatAnim(events: CombatEvent[], isSelfA: boolean) {
@@ -345,7 +369,6 @@
 				const did = e.defender_id as string;
 
 				animAttackers = new Set();
-				animTargets = new Set();
 				animHighlights = new Set();
 				animStricken = new Set();
 				animImpact = new Set();
@@ -354,7 +377,6 @@
 				await sleep(120);
 
 				animAttackers = new Set([aid]);
-				animTargets = new Set([did]);
 				animText = `${e.attacker_name} attacks ${e.defender_name}`;
 
 				await sleep(900);
@@ -366,12 +388,11 @@
 			} else if (e.type === 'damage_dealt') {
 				const aid = e.attacker_id as string;
 				const did = e.defender_id as string;
-				const atkDmg = e.damage_to_attacker as number;
 				const defDmg = e.damage_to_defender as number;
 
 				const attackerIsOpp = animOppBoard.some((m) => m.instance_id === aid);
 				if (defDmg > 0) spawnDmgNumber(did, defDmg, !attackerIsOpp);
-				if (atkDmg > 0) spawnDmgNumber(aid, atkDmg, attackerIsOpp);
+				const atkDmg = e.damage_to_attacker as number;
 
 				const shaken = new Set<string>();
 				if (atkDmg > 0) shaken.add(aid);
@@ -388,7 +409,6 @@
 				animImpact = new Set();
 				await sleep(500);
 				animAttackers = new Set();
-				animTargets = new Set();
 				animStricken = new Set();
 				animHighlights = new Set();
 
@@ -425,18 +445,22 @@
 				}
 
 			} else if (e.type === 'damage') {
-				updateMinionHealth(e.target_id as string, e.remaining_health as number);
+				const targetId = e.target_id as string;
+				const amount = e.amount as number;
+				const targetIsOpp = animOppBoard.some((m) => m.instance_id === targetId);
+				if (amount > 0) spawnDmgNumber(targetId, amount, targetIsOpp);
+				updateMinionHealth(targetId, e.remaining_health as number);
 				await sleep(120);
 			}
 		}
 
 		animHighlights = new Set();
 		animAttackers = new Set();
-		animTargets = new Set();
 		animStricken = new Set();
 		animImpact = new Set();
 		animCardStyles = new Map();
 		animDying = new Set();
+		clearDamageNumbers();
 
 		const result = gs.combatResult;
 		if (result) {
@@ -477,13 +501,12 @@
 		animOppBoard = [];
 		animHighlights = new Set();
 		animAttackers = new Set();
-		animTargets = new Set();
 		animStricken = new Set();
 		animImpact = new Set();
 		animDying = new Set();
 		animNewIds = new Set();
 		animCardStyles = new Map();
-		dmgNumbers = [];
+		clearDamageNumbers();
 		prevHealth = -1;
 		prevBoardIds = new Set();
 		newBoardIds = new Set();
@@ -675,7 +698,6 @@
 						emptyLabel="No minions"
 						highlightIds={animHighlights}
 						attackingIds={animAttackers}
-						targetedIds={animTargets}
 						strickenIds={animStricken}
 						impactIds={animImpact}
 						attackDirection="down"
@@ -715,7 +737,6 @@
 						emptyLabel="No minions"
 						highlightIds={animHighlights}
 						attackingIds={animAttackers}
-						targetedIds={animTargets}
 						strickenIds={animStricken}
 						impactIds={animImpact}
 						attackDirection="up"

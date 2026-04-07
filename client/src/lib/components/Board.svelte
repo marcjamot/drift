@@ -13,7 +13,6 @@
 		selectedIndex?: number | null;
 		highlightIds?: Set<string>;
 		attackingIds?: Set<string>;
-		targetedIds?: Set<string>;
 		strickenIds?: Set<string>;
 		impactIds?: Set<string>;
 		attackDirection?: 'up' | 'down';
@@ -42,7 +41,6 @@
 		selectedIndex = null,
 		highlightIds = new Set(),
 		attackingIds = new Set(),
-		targetedIds = new Set(),
 		strickenIds = new Set(),
 		impactIds = new Set(),
 		attackDirection = 'up',
@@ -80,7 +78,6 @@
 					selected={selectedIndex === i}
 					highlighted={highlightIds.has(minion.instance_id)}
 					attacking={attackingIds.has(minion.instance_id)}
-					targeted={targetedIds.has(minion.instance_id)}
 					stricken={strickenIds.has(minion.instance_id)}
 					impact={impactIds.has(minion.instance_id)}
 					{attackDirection}

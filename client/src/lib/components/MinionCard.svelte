@@ -9,7 +9,6 @@
 		selected?: boolean;
 		highlighted?: boolean;
 		attacking?: boolean;
-		targeted?: boolean;
 		stricken?: boolean;
 		impact?: boolean;
 		attackDirection?: 'up' | 'down';
@@ -30,7 +29,6 @@
 		selected = false,
 		highlighted = false,
 		attacking = false,
-		targeted = false,
 		stricken = false,
 		impact = false,
 		attackDirection = 'up',
@@ -56,7 +54,6 @@
 	class:divine={minion.divine_shield}
 	class:highlighted
 	class:attacking
-	class:targeted
 	class:stricken
 	class:impact
 	class:attack-up={attackDirection === 'up'}
@@ -162,12 +159,6 @@
 			border-color 0.15s,
 			transform 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94),
 			box-shadow 0.2s;
-	}
-
-	.minion-card.targeted {
-		border-color: #d35b5b;
-		border-style: dashed;
-		box-shadow: 0 0 10px #d35b5b55;
 	}
 
 	/* Shake when struck */
