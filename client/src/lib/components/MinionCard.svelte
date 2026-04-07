@@ -3,36 +3,43 @@
 
 	interface Props {
 		minion: MinionSnapshot;
+		cardId?: string;
 		size?: 'small' | 'medium' | 'large';
 		selected?: boolean;
 		highlighted?: boolean;
 		attacking?: boolean;
 		targeted?: boolean;
 		stricken?: boolean;
+		impact?: boolean;
 		attackDirection?: 'up' | 'down';
 		showHealthLeft?: boolean;
 		dying?: boolean;
 		isNew?: boolean;
+		lungeStyle?: string;
 		onclick?: () => void;
 	}
 
 	let {
 		minion,
+		cardId = undefined,
 		size = 'medium',
 		selected = false,
 		highlighted = false,
 		attacking = false,
 		targeted = false,
 		stricken = false,
+		impact = false,
 		attackDirection = 'up',
 		showHealthLeft = false,
 		dying = false,
 		isNew = false,
+		lungeStyle = '',
 		onclick
 	}: Props = $props();
 </script>
 
 <button
+	id={cardId}
 	class="minion-card"
 	class:size-small={size === 'small'}
 	class:size-medium={size === 'medium'}
@@ -44,10 +51,12 @@
 	class:attacking
 	class:targeted
 	class:stricken
+	class:impact
 	class:attack-up={attackDirection === 'up'}
 	class:attack-down={attackDirection === 'down'}
 	class:dying
 	class:is-new={isNew}
+	style={lungeStyle}
 	{onclick}
 	title={minion.name}
 >
@@ -92,11 +101,12 @@
 		cursor: pointer;
 		font-family: inherit;
 		color: #e0e0e0;
+		/* transform transition drives the JS-controlled lunge */
 		transition:
 			border-color 0.15s,
-			transform 0.12s,
+			transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94),
 			opacity 0.4s,
-		box-shadow 0.2s;
+			box-shadow 0.2s;
 	}
 
 	.minion-card:hover {
@@ -119,25 +129,35 @@
 		border-color: #4b88ff;
 		box-shadow: 0 0 16px #4b88ff66;
 	}
+
+	/* Attacking: glow + elevated z so the card lunges above everything */
 	.minion-card.attacking {
 		border-color: #4b88ff;
-		box-shadow: 0 0 16px #4b88ff66;
-		z-index: 2;
+		box-shadow: 0 0 22px #4b88ffaa;
+		z-index: 20;
+		/* fast transition when lunging so it snaps to target quickly */
+		transition:
+			border-color 0.15s,
+			transform 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+			box-shadow 0.2s;
 	}
-	.minion-card.attacking.attack-up {
-		transform: translateY(-10px) scale(1.03);
-	}
-	.minion-card.attacking.attack-down {
-		transform: translateY(10px) scale(1.03);
-	}
+
 	.minion-card.targeted {
 		border-color: #d35b5b;
 		border-style: dashed;
-		box-shadow: 0 0 0 2px #d35b5b44;
+		box-shadow: 0 0 10px #d35b5b55;
 	}
+
+	/* Shake when struck */
 	.minion-card.stricken {
 		animation: struck-shake 0.38s ease-in-out;
 	}
+
+	/* Orange hit flash on the card that receives the blow */
+	.minion-card.impact {
+		animation: impact-flash 0.38s ease-out;
+	}
+
 	.minion-card.dying {
 		opacity: 0;
 		transform: scale(0.7) translateY(10px);
@@ -160,12 +180,18 @@
 	}
 
 	@keyframes struck-shake {
-		0% { transform: translateX(0); }
-		20% { transform: translateX(-5px); }
-		40% { transform: translateX(5px); }
-		60% { transform: translateX(-4px); }
-		80% { transform: translateX(4px); }
+		0%   { transform: translateX(0); }
+		18%  { transform: translateX(-7px); }
+		36%  { transform: translateX(7px); }
+		54%  { transform: translateX(-5px); }
+		72%  { transform: translateX(5px); }
 		100% { transform: translateX(0); }
+	}
+
+	@keyframes impact-flash {
+		0%   { box-shadow: 0 0 0   0   transparent; filter: brightness(1); }
+		22%  { box-shadow: 0 0 32px 10px #ff8c3099; filter: brightness(1.6); }
+		100% { box-shadow: none;                    filter: brightness(1); }
 	}
 
 	.minion-card.size-small {

@@ -3,8 +3,8 @@ import logging
 import uuid
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
-from .match import Match
-from .player import PlayerState
+from ..match import Match
+from ..player import PlayerState
 
 logger = logging.getLogger(__name__)
 
@@ -17,16 +17,16 @@ class Matchmaker:
 
     def __init__(self) -> None:
         self._queue: List[_QueueEntry] = []
-        self._matches: Dict[str, Match] = {}          # match_id → Match
-        self._player_to_match: Dict[str, str] = {}    # player_id → match_id
+        self._matches: Dict[str, Match] = {}         # match_id → Match
+        self._player_to_match: Dict[str, str] = {}   # player_id → match_id
         self._lock = asyncio.Lock()
 
     async def queue(
         self, player_id: str, name: str, send_fn: Sender
     ) -> Optional[Match]:
         """
-        Add player to queue. Returns a Match if pairing was possible,
-        otherwise None (player stays in queue).
+        Add player to the queue.  Returns a Match if pairing was possible,
+        otherwise None (player waits in queue).
         """
         async with self._lock:
             self._queue.append((player_id, name, send_fn))
@@ -72,5 +72,5 @@ class Matchmaker:
                 self._player_to_match.pop(pid, None)
 
     def dequeue(self, player_id: str) -> None:
-        """Remove a player from the queue (e.g. on disconnect before match)."""
+        """Remove a player from the queue (e.g. on disconnect before match start)."""
         self._queue = [e for e in self._queue if e[0] != player_id]

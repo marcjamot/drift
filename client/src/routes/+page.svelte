@@ -26,10 +26,17 @@
 	let animAttackers = $state(new Set<string>());
 	let animTargets = $state(new Set<string>());
 	let animStricken = $state(new Set<string>());
+	let animImpact = $state(new Set<string>());
 	let animDying = $state(new Set<string>());
 	let animNewIds = $state(new Set<string>());
+	let animCardStyles = $state(new Map<string, string>());
 	let animText = $state('');
 	let animStarted = false;
+
+	type DmgNumber = { id: number; value: number; x: number; y: number; enemy: boolean };
+	let dmgNumbers = $state<DmgNumber[]>([]);
+	let dmgSeq = 0;
+	let arenaEl = $state<HTMLElement | null>(null);
 
 	function login() {
 		const n = nameInput.trim();
@@ -128,7 +135,8 @@
 	});
 
 	$effect(() => {
-		if (gs.phase !== 'buy' || animPhase !== 'done') return;
+		if (gs.phase !== 'buy') return;
+		if (animPhase === 'idle') return;
 		animStarted = false;
 		animPhase = 'idle';
 		animText = '';
@@ -136,8 +144,11 @@
 		animAttackers = new Set();
 		animTargets = new Set();
 		animStricken = new Set();
+		animImpact = new Set();
 		animDying = new Set();
 		animNewIds = new Set();
+		animCardStyles = new Map();
+		dmgNumbers = [];
 		gs.combatLog = [];
 		gs.combatMeta = null;
 		gs.combatResult = null;
@@ -161,48 +172,101 @@
 		);
 	}
 
+	function applyLunge(attackerId: string, defenderId: string) {
+		const aEl = document.getElementById('card-' + attackerId);
+		const dEl = document.getElementById('card-' + defenderId);
+		if (!aEl || !dEl) return;
+		const aR = aEl.getBoundingClientRect();
+		const dR = dEl.getBoundingClientRect();
+		const dx = (dR.left + dR.width / 2) - (aR.left + aR.width / 2);
+		const dy = (dR.top  + dR.height / 2) - (aR.top  + aR.height / 2);
+		animCardStyles = new Map([[attackerId, `transform: translate(${dx}px, ${dy}px) scale(0.93);`]]);
+	}
+
+	function spawnDmgNumber(cardId: string, value: number, isEnemyCard: boolean) {
+		if (value <= 0 || !arenaEl) return;
+		const cardEl = document.getElementById('card-' + cardId);
+		if (!cardEl) return;
+		const cR = cardEl.getBoundingClientRect();
+		const aR = arenaEl.getBoundingClientRect();
+		const x = cR.left + cR.width / 2 - aR.left;
+		const y = cR.top - aR.top + 10;
+		const id = ++dmgSeq;
+		dmgNumbers = [...dmgNumbers, { id, value, x, y, enemy: isEnemyCard }];
+		setTimeout(() => { dmgNumbers = dmgNumbers.filter((n) => n.id !== id); }, 950);
+	}
+
 	async function runCombatAnim(events: CombatEvent[], isSelfA: boolean) {
 		for (const e of events) {
 			if (e.type === 'attack') {
 				const aid = e.attacker_id as string;
 				const did = e.defender_id as string;
-				animAttackers = new Set([aid]);
+
+				animAttackers = new Set();
 				animTargets = new Set();
-				animHighlights = new Set([aid]);
-				animText = `${e.attacker_name} prepares`;
-				await sleep(800);
+				animHighlights = new Set();
+				animStricken = new Set();
+				animImpact = new Set();
+				animCardStyles = new Map();
+
+				await sleep(120);
+
+				animAttackers = new Set([aid]);
 				animTargets = new Set([did]);
-				animHighlights = new Set([aid]);
-				animText = `${e.attacker_name} targets ${e.defender_name}`;
-				await sleep(850);
+				animText = `${e.attacker_name} attacks ${e.defender_name}`;
+
+				await sleep(900);
+
+				await sleep(16);
+				applyLunge(aid, did);
+				await sleep(300);
+
 			} else if (e.type === 'damage_dealt') {
+				const aid = e.attacker_id as string;
+				const did = e.defender_id as string;
+				const atkDmg = e.damage_to_attacker as number;
+				const defDmg = e.damage_to_defender as number;
+
+				const attackerIsOpp = animOppBoard.some((m) => m.instance_id === aid);
+				if (defDmg > 0) spawnDmgNumber(did, defDmg, !attackerIsOpp);
+				if (atkDmg > 0) spawnDmgNumber(aid, atkDmg, attackerIsOpp);
+
 				const shaken = new Set<string>();
-				if ((e.damage_to_attacker as number) > 0) shaken.add(e.attacker_id as string);
-				if ((e.damage_to_defender as number) > 0) shaken.add(e.defender_id as string);
+				if (atkDmg > 0) shaken.add(aid);
+				if (defDmg > 0) shaken.add(did);
 				animStricken = shaken;
-				animText = 'Impact';
-				updateMinionHealth(e.attacker_id as string, e.attacker_remaining_hp as number);
-				updateMinionHealth(e.defender_id as string, e.defender_remaining_hp as number);
-				await sleep(1020);
+				animImpact = new Set([did]);
+				animCardStyles = new Map();
+				animText = '✦ Impact';
+
+				updateMinionHealth(aid, e.attacker_remaining_hp as number);
+				updateMinionHealth(did, e.defender_remaining_hp as number);
+
+				await sleep(180);
+				animImpact = new Set();
+				await sleep(500);
 				animAttackers = new Set();
 				animTargets = new Set();
 				animStricken = new Set();
 				animHighlights = new Set();
+
 			} else if (e.type === 'death') {
 				const mid = e.minion_id as string;
 				animDying = new Set([...animDying, mid]);
-				animText = `${e.minion_name} dies`;
+				animText = `${e.minion_name} falls`;
 				await sleep(550);
 				animSelfBoard = animSelfBoard.filter((m) => m.instance_id !== mid);
-				animOppBoard = animOppBoard.filter((m) => m.instance_id !== mid);
+				animOppBoard  = animOppBoard.filter((m) => m.instance_id !== mid);
 				animDying = new Set([...animDying].filter((id) => id !== mid));
+
 			} else if (e.type === 'buff') {
 				const tid = e.target_id as string;
 				animHighlights = new Set([tid]);
 				animText = `${e.target_name} grows stronger`;
 				updateMinionBuff(tid, e.attack as number, e.health as number);
-				await sleep(500);
+				await sleep(600);
 				animHighlights = new Set();
+
 			} else if (e.type === 'summon') {
 				const m = e.minion as MinionSnapshot;
 				if (m) {
@@ -213,13 +277,14 @@
 					else animSelfBoard = [...animSelfBoard, m];
 					animText = `${m.name} summoned`;
 					animHighlights = new Set([m.instance_id]);
-					await sleep(400);
+					await sleep(600);
 					animHighlights = new Set();
 					setTimeout(() => (animNewIds = new Set()), 500);
 				}
+
 			} else if (e.type === 'damage') {
 				updateMinionHealth(e.target_id as string, e.remaining_health as number);
-				await sleep(180);
+				await sleep(120);
 			}
 		}
 
@@ -227,10 +292,13 @@
 		animAttackers = new Set();
 		animTargets = new Set();
 		animStricken = new Set();
+		animImpact = new Set();
+		animCardStyles = new Map();
 		animDying = new Set();
+
 		const result = gs.combatResult;
 		if (result) {
-			if (result.winner_player === null) animText = 'Tie!';
+			if (result.winner_player === null) animText = 'Tie — no damage dealt';
 			else if (result.winner_player === gs.playerId) animText = 'You won this round';
 			else animText = 'You lost this round';
 		} else {
@@ -251,8 +319,33 @@
 		gs.gameOverWinner = null;
 		gs.self = null;
 		gs.opponent = null;
+		gs.round = 0;
+		gs.phase = null;
+		gs.buySecondsLeft = null;
+		gs.combatLog = [];
+		gs.combatMeta = null;
+		gs.combatResult = null;
+		gs.matchId = null;
+		gs.opponentName = null;
 		selectedBoardIdx = null;
 		selectedHandIdx = null;
+		animStarted = false;
+		animPhase = 'idle';
+		animText = '';
+		animSelfBoard = [];
+		animOppBoard = [];
+		animHighlights = new Set();
+		animAttackers = new Set();
+		animTargets = new Set();
+		animStricken = new Set();
+		animImpact = new Set();
+		animDying = new Set();
+		animNewIds = new Set();
+		animCardStyles = new Map();
+		dmgNumbers = [];
+		prevHealth = -1;
+		prevBoardIds = new Set();
+		newBoardIds = new Set();
 	}
 </script>
 
@@ -335,10 +428,7 @@
 
 				<section class="panel board-panel">
 					<div class="section-head">
-						<div>
-							<div class="section-kicker">Board</div>
-							<div class="section-title">Current warband</div>
-						</div>
+						<div class="section-kicker">Board</div>
 						<div class="meta-row">
 							<span class="meta-pill">Tier {gs.self.tavern_tier}</span>
 							<span class="meta-pill gold">⬡ {gs.self.gold}/{gs.self.max_gold}</span>
@@ -366,10 +456,7 @@
 
 				<section class="panel hand-panel">
 					<div class="section-head">
-						<div>
-							<div class="section-kicker">Hand</div>
-							<div class="section-title">Bought cards wait here</div>
-						</div>
+						<div class="section-kicker">Hand</div>
 						<span class="meta-pill">Cards {gs.self.hand.length}</span>
 					</div>
 					<Board
@@ -392,69 +479,85 @@
 				</section>
 			</div>
 		{:else}
-			<div class="combat-layout">
-				<section class="combat-side enemy-side">
-					<div class="section-head centered">
-						<div class="section-kicker">Enemy Board</div>
-						<div class="section-title">{gs.opponent.name}</div>
-					</div>
+			<div class="battle-arena" bind:this={arenaEl}>
+				<div class="arena-nameplate opp-plate">
+					<span class="arena-kicker">Enemy</span>
+					<span class="arena-name">{gs.opponent.name}</span>
+					<span class="arena-hp" class:low={gs.opponent.health <= 15}>♥ {gs.opponent.health}</span>
+				</div>
+
+				<div class="arena-row opp-row">
 					<Board
 						minions={showingOpp}
 						size="large"
 						align="center"
-						emptyLabel="No survivors"
+						bare={true}
+						emptyLabel="No minions"
 						highlightIds={animHighlights}
 						attackingIds={animAttackers}
 						targetedIds={animTargets}
 						strickenIds={animStricken}
+						impactIds={animImpact}
 						attackDirection="down"
-						showHealthLeft={true}
 						dyingIds={animDying}
 						newIds={animPhase !== 'idle' ? animNewIds : new Set()}
+						cardStyles={animCardStyles}
 					/>
-				</section>
+				</div>
 
-				<section class="combat-center">
-					{#if gs.combatResult}
+				<div class="arena-divider">
+					{#if animPhase === 'done' && gs.combatResult}
 						<div
-							class="result-banner"
+							class="result-pill"
 							class:win={gs.combatResult.winner_player === gs.self.player_id}
 							class:loss={gs.combatResult.winner_player !== null &&
 								gs.combatResult.winner_player !== gs.self.player_id}
 						>
 							{#if gs.combatResult.winner_player === null}
-								Tie, no damage dealt
+								Tie — no damage
 							{:else if gs.combatResult.winner_player === gs.self.player_id}
-								You won, opponent takes {gs.combatResult.damage}
+								You win · opponent takes {gs.combatResult.damage}
 							{:else}
-								You lost, you take {gs.combatResult.damage}
+								You lose · you take {gs.combatResult.damage}
 							{/if}
 						</div>
 					{:else}
-						<div class="combat-banner">{animText || 'Combat unfolding'}</div>
+						<div class="combat-pill">{animText || '⚔ Combat'}</div>
 					{/if}
-				</section>
+				</div>
 
-				<section class="combat-side player-side" class:flash={healthFlash}>
-					<div class="section-head centered">
-						<div class="section-kicker">Your Board</div>
-						<div class="section-title">{gs.self.name}</div>
-					</div>
+				<div class="arena-row self-row" class:flash={healthFlash}>
 					<Board
 						minions={showingSelf}
 						size="large"
 						align="center"
-						emptyLabel="No survivors"
+						bare={true}
+						emptyLabel="No minions"
 						highlightIds={animHighlights}
 						attackingIds={animAttackers}
 						targetedIds={animTargets}
 						strickenIds={animStricken}
+						impactIds={animImpact}
 						attackDirection="up"
-						showHealthLeft={true}
 						dyingIds={animDying}
 						newIds={animPhase !== 'idle' ? animNewIds : new Set()}
+						cardStyles={animCardStyles}
 					/>
-				</section>
+				</div>
+
+				<div class="arena-nameplate self-plate">
+					<span class="arena-kicker">You</span>
+					<span class="arena-name">{gs.self.name}</span>
+					<span class="arena-hp" class:low={gs.self.health <= 15}>♥ {gs.self.health}</span>
+				</div>
+
+				{#each dmgNumbers as n (n.id)}
+					<div
+						class="dmg-float"
+						class:dmg-enemy={n.enemy}
+						style="left:{n.x}px; top:{n.y}px;"
+					>-{n.value}</div>
+				{/each}
 			</div>
 		{/if}
 	</div>
@@ -620,15 +723,15 @@
 	@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 	.buy-layout {
-		display: grid;
-		grid-template-rows: auto minmax(200px, 1fr) minmax(160px, auto);
+		display: flex;
+		flex-direction: column;
 		gap: 18px;
-		min-height: 0;
 		flex: 1;
-		overflow: auto;
+		min-height: 0;
+		overflow-y: auto;
 		padding-right: 4px;
 	}
-	.buy-layout.flash, .player-side.flash {
+	.buy-layout.flash {
 		animation: dmg-flash 0.8s ease-out;
 	}
 	@keyframes dmg-flash {
@@ -636,22 +739,21 @@
 		100% { filter: none; }
 	}
 
-	.panel, .combat-side, .combat-center {
+	.panel {
 		border-radius: 24px;
 		background: rgba(12, 15, 19, 0.82);
 		border: 1px solid #2f3944;
 		backdrop-filter: blur(8px);
-	}
-	.panel {
 		padding: 20px;
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
-		min-height: 0;
+		flex-shrink: 0;
 	}
 	.shop-panel { align-items: center; }
 	.board-panel { min-height: 220px; }
-	.hand-panel { min-height: 160px; }
+	.hand-panel  { min-height: 160px; }
+
 	.section-head {
 		display: flex;
 		justify-content: space-between;
@@ -659,20 +761,11 @@
 		gap: 12px;
 		flex-wrap: wrap;
 	}
-	.section-head.centered {
-		justify-content: center;
-		text-align: center;
-	}
 	.section-kicker {
 		font-size: 11px;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		color: #b5a992;
-	}
-	.section-title {
-		font-size: 28px;
-		line-height: 1;
-		color: #fff4df;
 	}
 	.meta-row, .action-row {
 		display: flex;
@@ -683,55 +776,102 @@
 	.meta-pill.gold { color: #ffd87a; border-color: #7f6330; }
 	.action-row { justify-content: center; }
 
-	.combat-layout {
-		display: grid;
-		grid-template-rows: 1fr auto 1fr;
-		gap: 18px;
+	.battle-arena {
+		position: relative;
 		flex: 1;
 		min-height: 0;
-	}
-	.combat-side {
-		padding: 22px;
 		display: flex;
 		flex-direction: column;
-		gap: 18px;
-		min-height: 0;
+		border-radius: 24px;
+		background: rgba(10, 8, 6, 0.88);
+		border: 1px solid #3a2e22;
+		backdrop-filter: blur(8px);
+		overflow: visible;
+		animation: arena-in 0.4s ease-out both;
 	}
-	.enemy-side {
-		animation: stage-in 0.45s ease-out;
+	@keyframes arena-in {
+		from { opacity: 0; transform: scale(0.97); }
+		to   { opacity: 1; transform: scale(1); }
 	}
-	.player-side {
-		animation: stage-in 0.45s 0.08s ease-out both;
+
+	.arena-nameplate {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 20px;
 	}
-	.combat-center {
+	.opp-plate  { border-bottom: 1px solid #2a2218; }
+	.self-plate { border-top:    1px solid #2a2218; }
+	.arena-kicker {
+		font-size: 10px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: #6b6050;
+	}
+	.arena-name {
+		font-size: 15px;
+		font-weight: 700;
+		color: #d4c9b4;
+	}
+	.arena-hp {
+		font-size: 13px;
+		color: #7ab87d;
+		margin-left: auto;
+	}
+	.arena-hp.low { color: #c46060; }
+
+	.arena-row {
+		flex: 1;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 12px;
-		min-height: 92px;
+		padding: 12px 20px;
+		overflow: visible;
 	}
-	.combat-banner, .result-banner {
-		padding: 14px 22px;
+	.opp-row  { align-items: flex-end;   padding-bottom: 6px;  }
+	.self-row { align-items: flex-start; padding-top:    6px;  }
+	.self-row.flash { animation: dmg-flash 0.8s ease-out; }
+
+	.arena-divider {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0 20px;
+		height: 48px;
+		border-top:    1px solid #241e16;
+		border-bottom: 1px solid #241e16;
+		flex-shrink: 0;
+	}
+
+	.combat-pill, .result-pill {
+		padding: 7px 18px;
 		border-radius: 999px;
-		font-size: 18px;
+		font-size: 14px;
 		text-align: center;
 		background: #1a1410;
 		border: 1px solid #5a4833;
 		color: #f4dfbb;
+		animation: fade-in 0.2s ease-out;
 	}
-	.result-banner.win {
-		background: #132116;
-		border-color: #4b8052;
-		color: #d8ffdc;
+	.result-pill.win  { background: #0e1a10; border-color: #4b8052; color: #c8ffd0; }
+	.result-pill.loss { background: #1e0f0f; border-color: #924c4c; color: #ffd0d0; }
+
+	.dmg-float {
+		position: absolute;
+		pointer-events: none;
+		transform: translateX(-50%);
+		font-size: 22px;
+		font-weight: 800;
+		color: #ff6b3d;
+		text-shadow: 0 2px 8px #00000088;
+		animation: dmg-rise 0.95s ease-out forwards;
+		z-index: 30;
 	}
-	.result-banner.loss {
-		background: #2a1313;
-		border-color: #924c4c;
-		color: #ffd6d6;
-	}
-	@keyframes stage-in {
-		from { opacity: 0; transform: translateY(14px); }
-		to { opacity: 1; transform: translateY(0); }
+	.dmg-float.dmg-enemy { color: #ff4444; }
+	@keyframes dmg-rise {
+		0%   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1.1); }
+		20%  { opacity: 1; transform: translateX(-50%) translateY(-8px) scale(1.3); }
+		100% { opacity: 0; transform: translateX(-50%) translateY(-52px) scale(0.9); }
 	}
 
 	.game-over {
@@ -752,30 +892,15 @@
 		letter-spacing: -0.03em;
 		color: #f2eadc;
 	}
-	.go-result.win { color: #91d694; }
+	.go-result.win  { color: #91d694; }
 	.go-result.loss { color: #df8f8f; }
 	.go-sub { font-size: 15px; color: #b5a992; }
 
 	@media (max-width: 900px) {
-		.game-shell {
-			padding: 12px;
-			gap: 12px;
-		}
-		.topbar {
-			padding: 12px;
-		}
-		.section-title {
-			font-size: 22px;
-		}
-		.buy-layout, .combat-layout {
-			gap: 12px;
-		}
-		.panel, .combat-side {
-			padding: 14px;
-		}
-		.combat-banner, .result-banner {
-			font-size: 15px;
-			padding: 12px 16px;
-		}
+		.game-shell { padding: 12px; gap: 12px; }
+		.topbar     { padding: 12px; }
+		.buy-layout { gap: 12px; }
+		.panel      { padding: 14px; }
+		.combat-pill, .result-pill { font-size: 13px; padding: 6px 14px; }
 	}
 </style>

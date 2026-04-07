@@ -2,10 +2,10 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
-from .cards.base import CardEvent, Minion, SpawnEvent
+from ..cards.base import CardEvent, Minion, SpawnEvent
 
 PlayerDict = dict[str, Any]
-BuyEvent = dict[str, Any]
+BuyEventData = dict[str, Any]
 
 BOARD_SIZE = 7
 MAX_GOLD = 10
@@ -35,7 +35,7 @@ def compute_upgrade_cost(current_tier: int, round_num: int) -> int:
 class BuyContext:
     player: "PlayerState"
     rng: random.Random
-    events: List[BuyEvent] = field(default_factory=list)
+    events: List[BuyEventData] = field(default_factory=list)
 
     def buff(self, minion: Minion, attack: int = 0, health: int = 0) -> None:
         minion.attack = max(0, minion.attack + attack)
@@ -52,7 +52,7 @@ class BuyContext:
         )
 
     def summon_to_board(self, card_id: str) -> Optional[Minion]:
-        from .cards.catalog import CARD_CATALOG
+        from ..cards.catalog import CARD_CATALOG
 
         if len(self.player.board) < BOARD_SIZE and card_id in CARD_CATALOG:
             m: Minion = CARD_CATALOG[card_id].create_instance()
@@ -65,7 +65,7 @@ class BuyContext:
         return None
 
     def trigger(self, hook_name: str, event: CardEvent) -> None:
-        from .cards.catalog import CARD_CATALOG
+        from ..cards.catalog import CARD_CATALOG
 
         for minion in list(self.player.board):
             card_def = CARD_CATALOG.get(minion.card_id)

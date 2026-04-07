@@ -9,7 +9,7 @@ import random
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
-from .cards.base import (
+from ..cards.base import (
     AttackEvent,
     CardEvent,
     CombatStartEvent,
@@ -20,7 +20,7 @@ from .cards.base import (
     SpawnEvent,
     TargetEvent,
 )
-from .player import BOARD_SIZE
+from ..player import BOARD_SIZE
 
 CombatEvent = dict[str, Any]
 CombatResult = dict[str, Any]
@@ -61,7 +61,7 @@ class CombatContext:
         )
 
     def summon(self, card_id: str, to_enemy: bool = False) -> Optional[Minion]:
-        from .cards.catalog import CARD_CATALOG
+        from ..cards.catalog import CARD_CATALOG
 
         board: List[Minion] = self.enemy_board if to_enemy else self.friendly_board
         if len(board) < BOARD_SIZE and card_id in CARD_CATALOG:
@@ -72,8 +72,8 @@ class CombatContext:
                 {
                     "type": "summon",
                     "card_id": card_id,
-                    "minion": m.to_dict(),   # full snapshot for client replay
-                    "side": target_side,     # absolute side index (0 or 1)
+                    "minion": m.to_dict(),
+                    "side": target_side,
                     "to_enemy": to_enemy,
                 }
             )
@@ -148,7 +148,7 @@ def _dispatch_hooks(
     hook_name: str,
     event: CardEvent,
 ) -> None:
-    from .cards.catalog import CARD_CATALOG
+    from ..cards.catalog import CARD_CATALOG
 
     for side in range(2):
         board: List[Minion] = boards[side]
@@ -297,7 +297,7 @@ def resolve_combat(
                 "attacker_attack": attacker.attack,
                 "defender_id": defender.instance_id,
                 "defender_name": defender.name,
-                "defender_attack": defender.attack,  # needed for damage numbers
+                "defender_attack": defender.attack,
             }
         )
 

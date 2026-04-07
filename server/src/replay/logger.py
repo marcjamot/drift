@@ -6,11 +6,13 @@ from typing import Any, List
 
 logger = logging.getLogger(__name__)
 
-REPLAY_DIR = os.path.join(os.path.dirname(__file__), "..", "replays")
+REPLAY_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "replays")
 ReplayEntry = dict[str, Any]
 
 
 class ReplayLogger:
+    """Records a match as a structured event log, saveable to JSON."""
+
     def __init__(self, match_id: str) -> None:
         self.match_id = match_id
         self.entries: List[ReplayEntry] = []

@@ -1,0 +1,173 @@
+import asyncio
+import json
+import logging
+import math
+import random
+import time
+from typing import Any, Awaitable, Callable, Dict, List, Optional
+
+from ..cards.catalog import CARD_CATALOG
+from ..cards.pool import CardPool
+from ..player import PlayerState
+from .phases.base import Phase
+from .phases.buy_phase import BuyPhase, DURATION as BUY_TIMER
+from .phases.combat_phase import CombatPhase
+
+logger = logging.getLogger(__name__)
+
+Message = dict[str, Any]
+ActionResult = dict[str, Any]
+Sender = Callable[[str], Awaitable[None]]
+
+
+class Match:
+    """
+    Orchestrates a single 2-player match.
+
+    Game loop:
+        while not game_over:
+            BuyPhase.enter()   → set state, refresh shops, start buy timer
+            BuyPhase.wait()    → block until timer expires or both players lock
+            CombatPhase.enter()→ broadcast combat_start
+            CombatPhase.wait() → resolve fight, apply damage, display delay
+        broadcast game_over
+
+    The buy timer only starts inside BuyPhase.enter(), which is only reached
+    after CombatPhase.wait() fully returns.  This guarantees the purchase
+    window never opens while a battle result is still being displayed.
+    """
+
+    def __init__(
+        self,
+        match_id: str,
+        players: List[PlayerState],
+        seed: Optional[int] = None,
+    ) -> None:
+        self.match_id = match_id
+        self.player_order: List[str] = [p.player_id for p in players]
+        self.players: Dict[str, PlayerState] = {p.player_id: p for p in players}
+
+        self.seed: int = seed if seed is not None else hash(match_id) & 0xFFFFFFFF
+        self.rng = random.Random(self.seed)
+
+        self.round: int = 1
+        self.phase: str = "waiting"
+        self.winner: Optional[str] = None
+
+        self.pool: CardPool = CardPool(
+            list(CARD_CATALOG.values()), random.Random(self.seed ^ 0xDEAD)
+        )
+
+        self._senders: Dict[str, Sender] = {}
+        self._lock = asyncio.Lock()
+        self._phase_end = asyncio.Event()
+        self._buy_phase_started_at: Optional[float] = None
+
+        self._buy_phase = BuyPhase()
+        self._combat_phase = CombatPhase()
+        self._current_phase: Optional[Phase] = None
+
+    # ── sender registry ───────────────────────────────────────────────────────
+
+    def register_sender(self, player_id: str, send_fn: Sender) -> None:
+        self._senders[player_id] = send_fn
+
+    def unregister_sender(self, player_id: str) -> None:
+        self._senders.pop(player_id, None)
+
+    # ── messaging ─────────────────────────────────────────────────────────────
+
+    async def send_to(self, player_id: str, msg: Message) -> None:
+        fn = self._senders.get(player_id)
+        if fn:
+            try:
+                await fn(json.dumps(msg))
+            except Exception as exc:
+                logger.warning("Send to %s failed: %s", player_id, exc)
+
+    async def broadcast(self, msg: Message) -> None:
+        for pid in self.player_order:
+            await self.send_to(pid, msg)
+
+    async def send_state(self, player_id: str) -> None:
+        player = self.players[player_id]
+        opp_id = self._opponent(player_id)
+        opp = self.players[opp_id]
+
+        buy_seconds_left: Optional[int] = None
+        if self.phase == "buy" and self._buy_phase_started_at is not None:
+            buy_seconds_left = max(
+                0,
+                math.ceil(BUY_TIMER - (time.monotonic() - self._buy_phase_started_at)),
+            )
+
+        await self.send_to(
+            player_id,
+            {
+                "type": "state",
+                "round": self.round,
+                "phase": self.phase,
+                "winner": self.winner,
+                "buy_seconds_left": buy_seconds_left,
+                "self": player.to_dict(as_self=True),
+                "opponent": opp.to_dict(as_self=False),
+            },
+        )
+
+    async def broadcast_state(self) -> None:
+        for pid in self.player_order:
+            await self.send_state(pid)
+
+    # ── game loop ─────────────────────────────────────────────────────────────
+
+    async def run(self) -> None:
+        for player in self.players.values():
+            self._buy_phase._refresh_shop(player, self)
+
+        while self.phase != "game_over":
+            self._current_phase = self._buy_phase
+            await self._buy_phase.enter(self)
+            await self._buy_phase.wait(self)
+
+            if self.phase == "game_over":
+                break
+
+            self._current_phase = self._combat_phase
+            await self._combat_phase.enter(self)
+            await self._combat_phase.wait(self)
+
+        self._current_phase = None
+        await self.broadcast({"type": "game_over", "winner": self.winner})
+
+    # ── action dispatch ───────────────────────────────────────────────────────
+
+    async def handle_action(self, player_id: str, action: Message) -> ActionResult:
+        async with self._lock:
+            kind = action.get("type")
+
+            if kind == "concede":
+                return self._act_concede(player_id)
+
+            if self._current_phase is None:
+                return {"error": "match not started"}
+
+            result = await self._current_phase.handle_action(player_id, action, self)
+
+            if result.get("ok"):
+                for pid in self.player_order:
+                    await self.send_state(pid)
+
+            return result
+
+    def _act_concede(self, player_id: str) -> ActionResult:
+        if self.phase == "game_over":
+            return {"error": "game already over"}
+        self.winner = self._opponent(player_id)
+        self.phase = "game_over"
+        self._phase_end.set()
+        return {"ok": True}
+
+    # ── helpers ───────────────────────────────────────────────────────────────
+
+    def _opponent(self, player_id: str) -> str:
+        return next(pid for pid in self.player_order if pid != player_id)
