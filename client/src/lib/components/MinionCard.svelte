@@ -131,13 +131,14 @@
 	.minion-card:hover {
 		border-color: #666;
 		transform: translateY(-3px);
+		z-index: 50;
 	}
 
 	.tooltip {
 		position: absolute;
 		left: 50%;
-		bottom: calc(100% + 10px);
-		transform: translateX(-50%) translateY(6px);
+		top: calc(100% + 10px);
+		transform: translateX(-50%) translateY(-6px);
 		width: min(220px, 70vw);
 		padding: 8px 10px;
 		border-radius: 10px;
@@ -158,10 +159,10 @@
 		content: "";
 		position: absolute;
 		left: 50%;
-		top: 100%;
+		bottom: 100%;
 		transform: translateX(-50%);
 		border: 6px solid transparent;
-		border-top-color: #46505f;
+		border-bottom-color: #46505f;
 	}
 
 	.minion-card:hover .tooltip,
@@ -170,7 +171,7 @@
 		transform: translateX(-50%) translateY(0);
 	}
 
-	.minion-card.selected {
+.minion-card.selected {
 		border-color: #d4a020;
 		box-shadow: 0 0 10px #d4a02055;
 	}

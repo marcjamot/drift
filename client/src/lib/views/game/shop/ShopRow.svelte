@@ -24,7 +24,7 @@
 						size="large"
 						draggable={cardsDraggable}
 						ghostSource={ghostSourceShopIndex === i}
-						ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, slot, event) : undefined}
+ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, slot, event) : undefined}
 						ondragend={cardsDraggable ? oncarddragend : undefined}
 					/>
 					<div class="buy-cost">3g</div>
