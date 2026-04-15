@@ -7,9 +7,10 @@
 		cardsDraggable?: boolean;
 		oncarddragstart?: (index: number, event: DragEvent) => void;
 		oncarddragend?: (event: DragEvent) => void;
+		ghostSourceIds?: Set<string>;
 	}
 
-	let { hand, cardsDraggable = false, oncarddragstart, oncarddragend }: Props = $props();
+	let { hand, cardsDraggable = false, oncarddragstart, oncarddragend, ghostSourceIds = new Set<string>() }: Props = $props();
 </script>
 
 <div class="section-head">
@@ -24,6 +25,7 @@
 	{cardsDraggable}
 	{oncarddragstart}
 	{oncarddragend}
+	{ghostSourceIds}
 />
 
 <style>

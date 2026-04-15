@@ -53,7 +53,7 @@
 
 			{#if !showCombat && gs.phase === "buy"}
 				<div class="controls">
-					<span class="turn-timer" class:urgent={(gs.buySecondsLeft ?? 99) <= 5}>
+					<span class="turn-timer" class:urgent={(gs.buySecondsLeft ?? 99) <= 10}>
 						{gs.buySecondsLeft ?? 0}s
 					</span>
 					<button class="btn concede" onclick={concede}>
@@ -69,6 +69,17 @@
 				</div>
 			{/if}
 		</header>
+
+		{#if !showCombat && gs.phase === "buy" && (gs.buySecondsLeft ?? 99) <= 20}
+			{@const pct = ((gs.buySecondsLeft ?? 0) / 20) * 100}
+			<div class="countdown-bar-track">
+				<div
+					class="countdown-bar"
+					class:low={pct < 40}
+					style="width:{pct}%"
+				></div>
+			</div>
+		{/if}
 
 		{#if !showCombat && gs.phase === "buy"}
 			<ShopView {healthFlash} />
@@ -149,6 +160,40 @@
 		border-color: #c77474;
 		background: #3a1e1e;
 		color: #ffd6d6;
+		animation: timer-pulse 0.75s ease-in-out infinite;
+	}
+	@keyframes timer-pulse {
+		0%, 100% { box-shadow: none; }
+		50% { box-shadow: 0 0 14px 3px #c7747455; }
+	}
+
+	.countdown-bar-track {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 5px;
+		background: #0a0c0e;
+		z-index: 200;
+		animation: bar-track-in 0.4s ease-out both;
+	}
+	@keyframes bar-track-in {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+	.countdown-bar {
+		height: 100%;
+		background: linear-gradient(90deg, #4b8a5a, #71c186);
+		transition: width 1s linear, background 0.4s ease;
+		border-radius: 0 3px 3px 0;
+	}
+	.countdown-bar.low {
+		background: linear-gradient(90deg, #8a3a3a, #e06060);
+		animation: bar-pulse 0.6s ease-in-out infinite;
+	}
+	@keyframes bar-pulse {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.55; }
 	}
 
 	.btn {

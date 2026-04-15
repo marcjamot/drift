@@ -19,6 +19,8 @@
 		newIds?: Set<string>;
 		/** Per-card inline style strings for JS-driven transforms (e.g. lunge). */
 		cardStyles?: Map<string, string>;
+		/** Instance IDs of cards currently being dragged (render as ghost). */
+		ghostSourceIds?: Set<string>;
 		/** Strip background/border so cards float directly in a parent arena. */
 		bare?: boolean;
 		onselect?: (index: number) => void;
@@ -44,6 +46,7 @@
 		dyingIds = new Set(),
 		newIds = new Set(),
 		cardStyles = new Map(),
+		ghostSourceIds = new Set<string>(),
 		bare = false,
 		onselect,
 		oncarddragstart,
@@ -78,6 +81,7 @@
 					{showHealthLeft}
 					dying={dyingIds.has(minion.instance_id)}
 					isNew={newIds.has(minion.instance_id)}
+					ghostSource={ghostSourceIds.has(minion.instance_id)}
 					lungeStyle={cardStyles.get(minion.instance_id) ?? ""}
 					onclick={selectable ? () => onselect?.(i) : undefined}
 					ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, event) : undefined}

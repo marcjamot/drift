@@ -8,9 +8,10 @@
 		cardsDraggable?: boolean;
 		oncarddragstart?: (index: number, minion: MinionSnapshot, event: DragEvent) => void;
 		oncarddragend?: (event: DragEvent) => void;
+		ghostSourceShopIndex?: number | null;
 	}
 
-	let { self, cardsDraggable = false, oncarddragstart, oncarddragend }: Props = $props();
+	let { self, cardsDraggable = false, oncarddragstart, oncarddragend, ghostSourceShopIndex = null }: Props = $props();
 </script>
 
 <div class="shop-content">
@@ -22,6 +23,7 @@
 						minion={slot}
 						size="large"
 						draggable={cardsDraggable}
+						ghostSource={ghostSourceShopIndex === i}
 						ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, slot, event) : undefined}
 						ondragend={cardsDraggable ? oncarddragend : undefined}
 					/>

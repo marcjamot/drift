@@ -45,6 +45,35 @@
 		dragSource = null;
 	}
 
+	// Derive the instance_id of the card currently being dragged
+	const dragSourceId = $derived((): string | null => {
+		if (!dragSource || !gs.self) return null;
+		if (dragSource.origin === "shop") return gs.self.shop[dragSource.index]?.instance_id ?? null;
+		if (dragSource.origin === "hand") return gs.self.hand[dragSource.index]?.instance_id ?? null;
+		if (dragSource.origin === "board") return gs.self.board[dragSource.index]?.instance_id ?? null;
+		return null;
+	});
+	const ghostSourceIds = $derived(new Set(dragSourceId() ? [dragSourceId()!] : []));
+
+	function makeGhost(event: DragEvent, rotDeg = -4): void {
+		const src = event.currentTarget as HTMLElement;
+		const ghost = src.cloneNode(true) as HTMLElement;
+		ghost.style.cssText = [
+			"position:fixed",
+			"top:-9999px",
+			"left:-9999px",
+			`transform:rotate(${rotDeg}deg) scale(1.1)`,
+			"box-shadow:0 28px 56px #000000bb, 0 0 0 2px #71c18688",
+			`border-radius:${getComputedStyle(src).borderRadius}`,
+			"pointer-events:none",
+			`width:${src.offsetWidth}px`,
+			`opacity:0.95`,
+		].join(";");
+		document.body.appendChild(ghost);
+		event.dataTransfer?.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+		requestAnimationFrame(() => ghost.remove());
+	}
+
 	function isHandFull() {
 		return !!gs.self && gs.self.hand.length >= HAND_LIMIT;
 	}
@@ -152,6 +181,7 @@
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 		dragSource = { origin: "shop", index, name: minion.name };
 		activeDropZone = null;
+		makeGhost(event, -5);
 	}
 
 	function dragHandCard(index: number, event: DragEvent) {
@@ -162,6 +192,7 @@
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 		dragSource = { origin: "hand", index, name: minion.name };
 		activeDropZone = null;
+		makeGhost(event, -3);
 	}
 
 	function dragBoardCard(index: number, event: DragEvent) {
@@ -172,6 +203,7 @@
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 		dragSource = { origin: "board", index, name: minion.name };
 		activeDropZone = null;
+		makeGhost(event, 4);
 	}
 
 	function dragEnded() {
@@ -213,15 +245,10 @@
 			<ShopRow
 				self={gs.self}
 				cardsDraggable={true}
+				ghostSourceShopIndex={dragSource?.origin === "shop" ? dragSource.index : null}
 				oncarddragstart={dragShopCard}
 				oncarddragend={dragEnded}
 			/>
-			{#if getDropStatus("shop")}
-				<div class="drop-overlay">
-					<div class="drop-title">{getDropStatus("shop")?.title}</div>
-					<div class="drop-detail">{getDropStatus("shop")?.detail}</div>
-				</div>
-			{/if}
 		</section>
 
 		<!-- Board panel: cards in play (enter combat, sellable) -->
@@ -241,17 +268,12 @@
 				boardPreview={getBoardPreview()}
 				newIds={newBoardIds}
 				cardsDraggable={true}
+				{ghostSourceIds}
 				oncarddragstart={dragBoardCard}
 				oncarddragend={dragEnded}
 				oncarddragover={dragOverBoardCard}
 				oncarddrop={dropOnBoardCard}
 			/>
-			{#if getDropStatus("board")}
-				<div class="drop-overlay">
-					<div class="drop-title">{getDropStatus("board")?.title}</div>
-					<div class="drop-detail">{getDropStatus("board")?.detail}</div>
-				</div>
-			{/if}
 		</section>
 
 		<!-- Hand panel: purchased but not yet played -->
@@ -269,15 +291,10 @@
 			<HandRow
 				hand={gs.self.hand}
 				cardsDraggable={true}
+				{ghostSourceIds}
 				oncarddragstart={dragHandCard}
 				oncarddragend={dragEnded}
 			/>
-			{#if getDropStatus("hand")}
-				<div class="drop-overlay">
-					<div class="drop-title">{getDropStatus("hand")?.title}</div>
-					<div class="drop-detail">{getDropStatus("hand")?.detail}</div>
-				</div>
-			{/if}
 		</section>
 	</div>
 {/if}
@@ -291,6 +308,11 @@
 		min-height: 0;
 		overflow-y: auto;
 		padding-right: 4px;
+		animation: shop-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+	@keyframes shop-in {
+		from { opacity: 0; transform: translateY(18px); }
+		to { opacity: 1; transform: translateY(0); }
 	}
 	.buy-layout.flash {
 		animation: dmg-flash 0.8s ease-out;
@@ -328,51 +350,32 @@
 
 	.drop-zone.dragging {
 		transition:
-			border-color 0.15s,
-			box-shadow 0.15s,
-			background 0.15s;
+			border-color 0.2s,
+			box-shadow 0.2s,
+			background 0.2s;
 	}
 	.drop-zone.dragging.valid {
-		border-color: #4d8b5f;
-		box-shadow: inset 0 0 0 1px #4d8b5f55;
+		border-color: #5ca870;
+		box-shadow:
+			inset 0 0 0 1px #5ca87066,
+			0 0 16px 2px #5ca87022;
+		animation: zone-pulse 1.4s ease-in-out infinite;
 	}
 	.drop-zone.dragging.active.valid {
-		background: rgba(14, 34, 18, 0.9);
+		border-color: #71c186;
+		background: rgba(14, 36, 20, 0.88);
 		box-shadow:
 			inset 0 0 0 1px #71c18699,
-			0 0 0 1px #71c18644;
+			0 0 28px 4px #71c18633;
+		animation: none;
 	}
-
-	.drop-overlay {
-		position: absolute;
-		inset: 12px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		padding: 16px;
-		border-radius: 18px;
-		background: rgba(9, 11, 15, 0.82);
-		border: 1px dashed #485463;
-		backdrop-filter: blur(6px);
-		pointer-events: none;
-		text-align: center;
-		z-index: 5;
-	}
-	.drop-zone.valid .drop-overlay {
-		border-color: #71c186;
-		color: #d8ffdf;
-	}
-	.drop-title {
-		font-size: 15px;
-		font-weight: 700;
-		letter-spacing: 0.02em;
-	}
-	.drop-detail {
-		font-size: 12px;
-		color: #c4cdd8;
-		max-width: 28ch;
+	@keyframes zone-pulse {
+		0%, 100% {
+			box-shadow: inset 0 0 0 1px #5ca87066, 0 0 16px 2px #5ca87022;
+		}
+		50% {
+			box-shadow: inset 0 0 0 1px #71c186aa, 0 0 28px 6px #71c18644;
+		}
 	}
 
 	@media (max-width: 900px) {

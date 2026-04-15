@@ -11,6 +11,7 @@
 		oncarddragend?: (event: DragEvent) => void;
 		oncarddragover?: (index: number, event: DragEvent) => void;
 		oncarddrop?: (index: number, event: DragEvent) => void;
+		ghostSourceIds?: Set<string>;
 	}
 
 	let {
@@ -22,6 +23,7 @@
 		oncarddragend,
 		oncarddragover,
 		oncarddrop,
+		ghostSourceIds = new Set<string>(),
 	}: Props = $props();
 </script>
 
@@ -43,6 +45,7 @@
 	{oncarddragend}
 	{oncarddragover}
 	{oncarddrop}
+	{ghostSourceIds}
 />
 
 <style>

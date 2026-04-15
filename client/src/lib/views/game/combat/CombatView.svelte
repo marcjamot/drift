@@ -25,6 +25,7 @@
 	let animCardStyles = $state(new Map<string, string>());
 	let animText = $state("");
 	let animStarted = false;
+	let animShake = $state(false);
 
 	type DmgNumber = { id: number; cardId: string; value: number; x: number; y: number; enemy: boolean };
 	let dmgNumbers = $state<DmgNumber[]>([]);
@@ -156,6 +157,7 @@
 				const defDmg = e.damage_to_defender as number;
 				const attackerIsOpp = animOppBoard.some((m) => m.instance_id === aid);
 				if (defDmg > 0) spawnDmgNumber(did, defDmg, !attackerIsOpp);
+				if (defDmg >= 4) { animShake = true; setTimeout(() => (animShake = false), 380); }
 				const atkDmg = e.damage_to_attacker as number;
 				animStricken = new Set([...(atkDmg > 0 ? [aid] : []), ...(defDmg > 0 ? [did] : [])]);
 				animImpact = new Set([did]);
@@ -220,7 +222,7 @@
 	}
 </script>
 
-<div class="battle-arena" bind:this={arenaEl}>
+<div class="battle-arena" class:shaking={animShake} bind:this={arenaEl}>
 	{#if gs.opponent}
 		<EnemyInfo name={gs.opponent.name} health={gs.opponent.health} />
 	{/if}
@@ -285,17 +287,27 @@
 		border: 1px solid #3a2e22;
 		backdrop-filter: blur(8px);
 		overflow: visible;
-		animation: arena-in 0.4s ease-out both;
+		animation: arena-in 0.52s cubic-bezier(0.22, 1, 0.36, 1) both, arena-border-in 0.9s ease-out both;
 	}
 	@keyframes arena-in {
-		from {
-			opacity: 0;
-			transform: scale(0.97);
-		}
-		to {
-			opacity: 1;
-			transform: scale(1);
-		}
+		0% { opacity: 0; transform: scale(0.93) translateY(14px); }
+		60% { opacity: 1; transform: scale(1.015) translateY(-2px); }
+		100% { opacity: 1; transform: scale(1) translateY(0); }
+	}
+	@keyframes arena-border-in {
+		0% { box-shadow: 0 0 0 0 #c87c3099; }
+		35% { box-shadow: 0 0 40px 6px #c87c3055; }
+		100% { box-shadow: none; }
+	}
+	.battle-arena.shaking {
+		animation: arena-shake 0.34s ease-in-out;
+	}
+	@keyframes arena-shake {
+		0%, 100% { transform: translateX(0); }
+		18% { transform: translateX(-6px); }
+		40% { transform: translateX(5px); }
+		65% { transform: translateX(-3px); }
+		82% { transform: translateX(2px); }
 	}
 
 	.arena-divider {
@@ -309,7 +321,16 @@
 		flex-shrink: 0;
 	}
 
-	.combat-pill,
+	.combat-pill {
+		padding: 7px 18px;
+		border-radius: 999px;
+		font-size: 14px;
+		text-align: center;
+		background: #1a1410;
+		border: 1px solid #5a4833;
+		color: #f4dfbb;
+		animation: combat-entrance 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+	}
 	.result-pill {
 		padding: 7px 18px;
 		border-radius: 999px;
@@ -318,25 +339,27 @@
 		background: #1a1410;
 		border: 1px solid #5a4833;
 		color: #f4dfbb;
-		animation: fade-in 0.2s ease-out;
+		animation: result-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 	}
 	.result-pill.win {
 		background: #0e1a10;
 		border-color: #4b8052;
 		color: #c8ffd0;
+		box-shadow: 0 0 20px 2px #4b805233;
 	}
 	.result-pill.loss {
 		background: #1e0f0f;
 		border-color: #924c4c;
 		color: #ffd0d0;
+		box-shadow: 0 0 20px 2px #924c4c33;
 	}
-	@keyframes fade-in {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
+	@keyframes combat-entrance {
+		from { opacity: 0; transform: scale(0.6); }
+		to { opacity: 1; transform: scale(1); }
+	}
+	@keyframes result-pop {
+		from { opacity: 0; transform: scale(0.5); }
+		to { opacity: 1; transform: scale(1); }
 	}
 
 	.dmg-float {
