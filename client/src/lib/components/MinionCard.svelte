@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { MinionSnapshot } from "../types.js";
+	import type { MinionSnapshot } from "../game/types.js";
 
 	interface Props {
 		minion: MinionSnapshot;
@@ -13,6 +13,7 @@
 		showHealthLeft?: boolean;
 		dying?: boolean;
 		isNew?: boolean;
+		ghostSource?: boolean;
 		lungeStyle?: string;
 		onclick?: () => void;
 		ondragstart?: (event: DragEvent) => void;
@@ -31,6 +32,7 @@
 		showHealthLeft = false,
 		dying = false,
 		isNew = false,
+		ghostSource = false,
 		lungeStyle = "",
 		onclick,
 		ondragstart,
@@ -54,6 +56,7 @@
 	class:attack-down={attackDirection === "down"}
 	class:dying
 	class:is-new={isNew}
+	class:ghost-source={ghostSource}
 	style={lungeStyle}
 	{draggable}
 	{onclick}
@@ -107,7 +110,7 @@
 		/* transform transition drives the JS-controlled lunge */
 		transition:
 			border-color 0.15s,
-			transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+			transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
 			opacity 0.4s,
 			box-shadow 0.2s;
 		overflow: visible;
@@ -128,13 +131,14 @@
 	.minion-card:hover {
 		border-color: #666;
 		transform: translateY(-3px);
+		z-index: 50;
 	}
 
 	.tooltip {
 		position: absolute;
 		left: 50%;
-		bottom: calc(100% + 10px);
-		transform: translateX(-50%) translateY(6px);
+		top: calc(100% + 10px);
+		transform: translateX(-50%) translateY(-6px);
 		width: min(220px, 70vw);
 		padding: 8px 10px;
 		border-radius: 10px;
@@ -155,10 +159,10 @@
 		content: "";
 		position: absolute;
 		left: 50%;
-		top: 100%;
+		bottom: 100%;
 		transform: translateX(-50%);
 		border: 6px solid transparent;
-		border-top-color: #46505f;
+		border-bottom-color: #46505f;
 	}
 
 	.minion-card:hover .tooltip,
@@ -167,7 +171,7 @@
 		transform: translateX(-50%) translateY(0);
 	}
 
-	.minion-card.selected {
+.minion-card.selected {
 		border-color: #d4a020;
 		box-shadow: 0 0 10px #d4a02055;
 	}
@@ -189,9 +193,13 @@
 	}
 
 	.minion-card.dying {
-		opacity: 0;
-		transform: scale(0.7) translateY(10px);
+		animation: card-die 0.48s cubic-bezier(0.55, 0, 1, 0.45) both;
 		pointer-events: none;
+	}
+	@keyframes card-die {
+		0% { opacity: 1; transform: scale(1) rotate(0deg); filter: brightness(1); }
+		30% { opacity: 1; transform: scale(1.1) rotate(-4deg); filter: brightness(2.2) saturate(0.2); }
+		100% { opacity: 0; transform: scale(0.45) rotate(10deg) translateY(24px); filter: brightness(0); }
 	}
 
 	.minion-card.is-new {
@@ -243,6 +251,13 @@
 			box-shadow: none;
 			filter: brightness(1);
 		}
+	}
+
+	.minion-card.ghost-source {
+		opacity: 0.25;
+		transform: scale(0.93);
+		filter: grayscale(0.5);
+		pointer-events: none;
 	}
 
 	.minion-card.size-small {

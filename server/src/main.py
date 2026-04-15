@@ -104,7 +104,11 @@ async def handler(ws: Any) -> None:
                 if not match:
                     await _send(ws, {"type": "error", "message": "not in a match"})
                     continue
-                result: Message = await match.handle_action(player_id, msg)
+                try:
+                    result: Message = await match.handle_action(player_id, msg)
+                except Exception as exc:
+                    logger.exception("Unhandled error in handle_action for %s: %s", player_id, exc)
+                    result = {"error": "internal server error"}
                 await _send(ws, {"type": "action_result", "action": kind, **result})
 
     except websockets.exceptions.ConnectionClosed:

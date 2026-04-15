@@ -72,8 +72,8 @@ class BuyContext:
             if not card_def:
                 continue
             hook = getattr(card_def, hook_name, None)
-            if hook:
-                hook(minion, event, self)
+            if hook and hook.fn:
+                hook.fn(minion, event, self)
 
     def is_self(self, observer: Minion, subject: Minion | None) -> bool:
         return subject is not None and observer.instance_id == subject.instance_id
