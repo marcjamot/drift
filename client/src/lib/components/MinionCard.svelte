@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { MinionSnapshot } from "../types.js";
+	import type { MinionSnapshot } from "../game/types.js";
 
 	interface Props {
 		minion: MinionSnapshot;

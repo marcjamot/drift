@@ -1,8 +1,7 @@
 <script lang="ts">
-	import type { MinionSnapshot } from "../types.js";
-	import type { SelfSnapshot } from "../types.js";
-	import MinionCard from "./MinionCard.svelte";
-	import { send } from "../gameStore.svelte.js";
+	import type { MinionSnapshot, SelfSnapshot } from "$lib/game/types.js";
+	import MinionCard from "$lib/components/MinionCard.svelte";
+	import { send } from "$lib/game/store.svelte.js";
 
 	interface Props {
 		self: SelfSnapshot;
@@ -12,27 +11,9 @@
 	}
 
 	let { self, cardsDraggable = false, oncarddragstart, oncarddragend }: Props = $props();
-
-	function refresh() {
-		send({ type: "refresh" });
-	}
-
-	function freeze() {
-		send({ type: "freeze" });
-	}
-
-	function upgrade() {
-		send({ type: "upgrade" });
-	}
 </script>
 
-<div class="shop-wrap">
-	<div class="shop-header">
-		<span class="tier-badge">Tier {self.tavern_tier}</span>
-		<span class="gold">⬡ {self.gold} / {self.max_gold}</span>
-		<span class="hand-count">Hand {self.hand.length}</span>
-	</div>
-
+<div class="shop-content">
 	<div class="shop-row">
 		{#each self.shop as slot, i (`${slot?.instance_id ?? "empty"}-${i}`)}
 			{#if slot}
@@ -53,48 +34,35 @@
 	</div>
 
 	<div class="shop-actions">
-		<button onclick={refresh} disabled={self.gold < 1} class="btn"> Refresh (1g) </button>
+		<button onclick={() => send({ type: "refresh" })} disabled={self.gold < 1} class="btn">
+			Refresh (1g)
+		</button>
 
 		{#if self.tavern_tier < 6}
-			<button onclick={upgrade} disabled={self.gold < self.upgrade_cost} class="btn upgrade">
+			<button
+				onclick={() => send({ type: "upgrade" })}
+				disabled={self.gold < self.upgrade_cost}
+				class="btn upgrade"
+			>
 				Upgrade ({self.upgrade_cost}g → Tier {self.tavern_tier + 1})
 			</button>
 		{:else}
 			<span class="max-tier">Max tier</span>
 		{/if}
 
-		<button onclick={freeze} class="btn" class:frozen={self.frozen}>
+		<button onclick={() => send({ type: "freeze" })} class="btn" class:frozen={self.frozen}>
 			{self.frozen ? "❄ Frozen" : "Freeze"}
 		</button>
 	</div>
 </div>
 
 <style>
-	.shop-wrap {
+	.shop-content {
 		display: flex;
 		flex-direction: column;
 		gap: 18px;
 		align-items: center;
-	}
-	.shop-header {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		flex-wrap: wrap;
-		justify-content: center;
-	}
-	.tier-badge {
-		font-size: 12px;
-		background: #2a2a3a;
-		border: 1px solid #444;
-		border-radius: 4px;
-		padding: 2px 8px;
-		color: #ccc;
-	}
-	.gold {
-		font-size: 14px;
-		font-weight: 700;
-		color: #f0c040;
+		width: 100%;
 	}
 	.shop-row {
 		display: flex;
@@ -125,13 +93,10 @@
 		flex-wrap: wrap;
 		justify-content: center;
 	}
-	.hand-count {
+	.max-tier {
 		font-size: 12px;
-		color: #c9c3a2;
-		background: #17141b;
-		border: 1px solid #393146;
-		border-radius: 999px;
-		padding: 4px 10px;
+		color: #888;
+		align-self: center;
 	}
 	.btn {
 		font-family: inherit;
@@ -161,10 +126,5 @@
 	.btn.frozen {
 		border-color: #80c0ff;
 		color: #80c0ff;
-	}
-	.max-tier {
-		font-size: 12px;
-		color: #888;
-		align-self: center;
 	}
 </style>
