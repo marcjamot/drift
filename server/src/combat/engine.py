@@ -15,10 +15,12 @@ from ..cards.base import (
     CombatStartEvent,
     DamageEvent,
     DeathEvent,
+    Hook,
     KillEvent,
     Minion,
     SpawnEvent,
     TargetEvent,
+    TriggerCtx,
 )
 from ..player import BOARD_SIZE
 
@@ -85,6 +87,7 @@ class CombatContext:
                 self.events,
                 "on_spawn",
                 SpawnEvent(subject=m, source="summon", subject_side=target_side),
+                subject=m,
             )
             return m
         return None
@@ -148,26 +151,71 @@ def _dispatch_hooks(
     events: List[CombatEvent],
     hook_name: str,
     event: CardEvent,
+    subject: Optional[Minion] = None,
 ) -> None:
+    """Dispatch a hook event through the 5-phase lifecycle.
+
+    subject — the minion whose fn fires (e.g. the dying minion for on_death).
+               If None, fn fires for every minion that has one (global events
+               like on_combat_start where each card is its own subject).
+
+    Phase order:
+      1. start  — all cards; may call tctx.add_count / tctx.add_multiplier
+      2. before — all cards; fires once per run (count * multiplier times)
+      3. fn     — subject only (or all if subject is None); fires once per run
+      4. after  — all cards; fires once per run
+      5. end    — all cards; fires once after all runs
+    """
     from ..cards.catalog import CARD_CATALOG
 
+    entries: List[tuple] = []
     for side in range(2):
-        board: List[Minion] = boards[side]
-        other: List[Minion] = boards[1 - side]
-        for minion in list(board):
+        for minion in list(boards[side]):
             card_def = CARD_CATALOG.get(minion.card_id)
             if not card_def:
                 continue
-            hook = getattr(card_def, hook_name, None)
-            if hook is None:
+            hook: Hook = getattr(card_def, hook_name)
+            if hook.start or hook.before or hook.fn or hook.after or hook.end:
+                entries.append((side, minion, hook))
+
+    if not entries:
+        return
+
+    def _ctx(side: int) -> CombatContext:
+        return CombatContext(
+            friendly_board=boards[side],
+            enemy_board=boards[1 - side],
+            events=events,
+            friendly_side=side,
+        )
+
+    # 1. start — all cards vote on count and multiplier.
+    tctx = TriggerCtx()
+    for side, minion, hook in entries:
+        if hook.start:
+            hook.start(minion, event, _ctx(side), tctx)
+
+    # 2/3/4. before / fn / after — repeated count * multiplier times.
+    for _ in range(tctx.total):
+        for side, minion, hook in entries:
+            if hook.before:
+                hook.before(minion, event, _ctx(side))
+
+        for side, minion, hook in entries:
+            if not hook.fn:
                 continue
-            ctx = CombatContext(
-                friendly_board=board,
-                enemy_board=other,
-                events=events,
-                friendly_side=side,
-            )
-            hook(minion, event, ctx)
+            if subject is not None and minion.instance_id != subject.instance_id:
+                continue
+            hook.fn(minion, event, _ctx(side))
+
+        for side, minion, hook in entries:
+            if hook.after:
+                hook.after(minion, event, _ctx(side))
+
+    # 5. end — all cards, once after all runs.
+    for side, minion, hook in entries:
+        if hook.end:
+            hook.end(minion, event, _ctx(side))
 
 
 def _choose_target(defending_board: List[Minion], rng: random.Random) -> Optional[Minion]:
@@ -234,6 +282,7 @@ def _resolve_deaths(
                         killer=killer,
                         killer_side=killer_side,
                     ),
+                    subject=corpse,
                 )
                 if corpse in board:
                     board.remove(corpse)
@@ -288,6 +337,7 @@ def resolve_combat(
                 target=defender,
                 target_side=1 - current,
             ),
+            subject=attacker,
         )
 
         events.append(
@@ -312,6 +362,7 @@ def resolve_combat(
                 target=defender,
                 target_side=1 - current,
             ),
+            subject=attacker,
         )
 
         damage_to_attacker: int = attacker.take_damage(defender.attack)
@@ -330,6 +381,7 @@ def resolve_combat(
                 target_side=current,
                 amount=damage_to_attacker,
             ),
+            subject=attacker,
         )
         _dispatch_hooks(
             boards,
@@ -344,6 +396,7 @@ def resolve_combat(
                 target_side=1 - current,
                 amount=damage_to_defender,
             ),
+            subject=defender,
         )
 
         if damage_to_defender > 0 and not defender.is_alive():
@@ -359,6 +412,7 @@ def resolve_combat(
                     subject=defender,
                     subject_side=1 - current,
                 ),
+                subject=attacker,
             )
         if damage_to_attacker > 0 and not attacker.is_alive():
             _dispatch_hooks(
@@ -373,6 +427,7 @@ def resolve_combat(
                     subject=attacker,
                     subject_side=current,
                 ),
+                subject=defender,
             )
 
         events.append(

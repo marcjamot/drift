@@ -1,4 +1,4 @@
-from ..base import CardDef
+from ..base import CardDef, Hook
 from ..base import DeathEvent
 from ..base import Minion
 from ...combat import CombatContext
@@ -18,5 +18,5 @@ CARD = CardDef(
     base_health=12,
     tier=6,
     description="Whenever another friendly minion dies, summon a 1/1 Ember.",
-    on_death=forge_souls,
+    on_death=Hook(after=forge_souls),
 )

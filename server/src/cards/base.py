@@ -105,6 +105,51 @@ class RoundStartEvent(CardEvent):
 
 
 CardHook = Callable[["Minion", CardEvent, Any], None]
+StartHook = Callable[["Minion", CardEvent, "TriggerCtx"], None]
+
+
+@dataclass
+class TriggerCtx:
+    """Passed to Hook.start — controls how many times fn/before/after run.
+
+    Final run count = count * multiplier.
+    All start hooks on the board share this object and may modify both values.
+    """
+
+    count: int = 1
+    multiplier: int = 1
+
+    @property
+    def total(self) -> int:
+        return self.count * self.multiplier
+
+    def add_count(self, extra: int = 1) -> None:
+        self.count += extra
+
+    def add_multiplier(self, extra: int = 1) -> None:
+        self.multiplier += extra
+
+
+@dataclass
+class Hook:
+    """
+    Lifecycle wrapper for a single hook slot on a CardDef.
+
+    Execution order per dispatch:
+      1. start  — fires once before all runs; receives TriggerCtx to set count/multiplier
+      2. before — fires before each individual run
+      3. fn     — the main effect; fires N times (N determined by start hooks across all cards)
+      4. after  — fires after each individual run
+      5. end    — fires once after all runs
+
+    Passing a plain callable where a Hook is expected is treated as Hook(fn=callable).
+    """
+
+    start:  Optional[StartHook] = None
+    before: Optional[CardHook] = None
+    fn:     Optional[CardHook] = None
+    after:  Optional[CardHook] = None
+    end:    Optional[CardHook] = None
 
 
 @dataclass
@@ -164,17 +209,29 @@ class CardDef:
     keywords: list[str] = field(default_factory=list)
     description: str = ""
 
-    on_buy: Optional[CardHook] = None
-    on_sell: Optional[CardHook] = None
-    on_play: Optional[CardHook] = None
-    on_spawn: Optional[CardHook] = None
-    on_target: Optional[CardHook] = None
-    on_attack: Optional[CardHook] = None
-    on_damage: Optional[CardHook] = None
-    on_kill: Optional[CardHook] = None
-    on_death: Optional[CardHook] = None
-    on_combat_start: Optional[CardHook] = None
-    on_round_start: Optional[CardHook] = None
+    on_buy: Hook = field(default_factory=Hook)
+    on_sell: Hook = field(default_factory=Hook)
+    on_play: Hook = field(default_factory=Hook)
+    on_spawn: Hook = field(default_factory=Hook)
+    on_target: Hook = field(default_factory=Hook)
+    on_attack: Hook = field(default_factory=Hook)
+    on_damage: Hook = field(default_factory=Hook)
+    on_kill: Hook = field(default_factory=Hook)
+    on_death: Hook = field(default_factory=Hook)
+    on_combat_start: Hook = field(default_factory=Hook)
+    on_round_start: Hook = field(default_factory=Hook)
+
+    _HOOK_FIELDS: tuple = field(init=False, repr=False, compare=False, default=(
+        "on_buy", "on_sell", "on_play", "on_spawn", "on_target",
+        "on_attack", "on_damage", "on_kill", "on_death",
+        "on_combat_start", "on_round_start",
+    ))
+
+    def __post_init__(self) -> None:
+        for name in self._HOOK_FIELDS:
+            val = getattr(self, name)
+            if callable(val) and not isinstance(val, Hook):
+                setattr(self, name, Hook(fn=val))
 
     def create_instance(self) -> Minion:
         return Minion(

@@ -1,4 +1,4 @@
-from ..base import CardDef
+from ..base import CardDef, Hook
 from ..base import Minion
 from ..base import SpawnEvent
 from ...combat import CombatContext
@@ -18,5 +18,5 @@ CARD = CardDef(
     base_health=5,
     tier=4,
     description="After a friendly minion is summoned in combat, give it +2/+1.",
-    on_spawn=reward_summon,
+    on_spawn=Hook(after=reward_summon),
 )

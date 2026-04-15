@@ -1,4 +1,4 @@
-from ..base import CardDef
+from ..base import CardDef, Hook
 from ..base import DeathEvent
 from ..base import Minion
 from ...combat import CombatContext
@@ -18,5 +18,5 @@ CARD = CardDef(
     tier=6,
     keywords=["taunt"],
     description="Taunt. Whenever an enemy minion dies, deal 1 damage to all enemy minions.",
-    on_death=chain_blast,
+    on_death=Hook(after=chain_blast),
 )

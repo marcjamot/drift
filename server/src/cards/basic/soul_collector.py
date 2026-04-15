@@ -1,4 +1,4 @@
-from ..base import CardDef
+from ..base import CardDef, Hook
 from ..base import DeathEvent
 from ..base import Minion
 from ...combat import CombatContext
@@ -16,5 +16,5 @@ CARD = CardDef(
     base_health=3,
     tier=3,
     description="Whenever an enemy dies in combat, gain +1/+1.",
-    on_death=feast,
+    on_death=Hook(after=feast),
 )
