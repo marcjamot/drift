@@ -19,6 +19,7 @@ export const gs = $state({
 	error: null as string | null,
 	gameOverWinner: null as string | null,
 	connected: false,
+	discoverOptions: null as import("./types.js").MinionSnapshot[] | null,
 });
 
 let _frozenRound = -1;
@@ -174,7 +175,14 @@ function handle(msg: Record<string, unknown>) {
 			setTimeout(() => (gs.error = null), 4000);
 			return;
 
+		case "discover":
+			gs.discoverOptions = msg.options as import("./types.js").MinionSnapshot[];
+			return;
+
 		case "action_result":
+			if ((msg.action as string) === "discover_pick" && !msg.error) {
+				gs.discoverOptions = null;
+			}
 			if (msg.error) {
 				gs.error = msg.error as string;
 				setTimeout(() => (gs.error = null), 3000);

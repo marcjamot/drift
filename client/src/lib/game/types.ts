@@ -69,4 +69,5 @@ export type Intent =
 	| { type: "refresh" }
 	| { type: "upgrade" }
 	| { type: "lock" }
+	| { type: "discover_pick"; index: number }
 	| { type: "concede" };

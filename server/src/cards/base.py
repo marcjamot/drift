@@ -246,6 +246,14 @@ class CardDef:
             divine_shield="divine_shield" in self.keywords,
         )
 
+    def create_golden_instance(self) -> Minion:
+        m = self.create_instance()
+        m.golden = True
+        m.attack *= 2
+        m.health *= 2
+        m.max_health *= 2
+        return m
+
     def to_dict(self) -> CardDict:
         return {
             "id": self.id,
