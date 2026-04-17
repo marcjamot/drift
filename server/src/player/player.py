@@ -4,7 +4,7 @@ import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ..cards.base import CardEvent, Minion, SpawnEvent
+from ..cards.base import CardEvent, Minion, SpawnEvent, TriggerCtx
 
 if TYPE_CHECKING:
     from ..heroes.base import HeroDef
@@ -77,8 +77,20 @@ class BuyContext:
             if not card_def:
                 continue
             hook = getattr(card_def, hook_name, None)
-            if hook and hook.fn:
-                hook.fn(minion, event, self)
+            if not hook:
+                continue
+            tctx = TriggerCtx()
+            if hook.start:
+                hook.start(minion, event, self, tctx)
+            for _ in range(tctx.total):
+                if hook.before:
+                    hook.before(minion, event, self)
+                if hook.fn:
+                    hook.fn(minion, event, self)
+                if hook.after:
+                    hook.after(minion, event, self)
+            if hook.end:
+                hook.end(minion, event, self)
 
     def trigger_hero(self, hook_name: str, event: CardEvent) -> None:
         hero = self.player.hero
@@ -94,7 +106,12 @@ class BuyContext:
     def is_other(self, observer: Minion, subject: Minion | None) -> bool:
         return subject is not None and observer.instance_id != subject.instance_id
 
-    def is_friendly(self, observer: Minion, subject: Minion | None) -> bool:
+    def is_friendly(
+        self,
+        observer: Minion,
+        subject: Minion | None,
+        subject_side: int | None = None,
+    ) -> bool:
         return subject is not None and any(
             member.instance_id == subject.instance_id for member in self.player.board
         )

@@ -3,9 +3,13 @@ from types import ModuleType
 from ..base import CardDef, TRIBES
 from .beast import ashen_rat as ashen_rat_module
 from .beast import banner_pup as banner_pup_module
+from .beast import hunting_hound as hunting_hound_module
+from .beast import mama_bear as mama_bear_module
 from .beast import mossback_turtle as mossback_turtle_module
 from .beast import pack_matron as pack_matron_module
+from .beast import pack_leader as pack_leader_module
 from .beast import phoenix_husk as phoenix_husk_module
+from .beast import prowling_cat as prowling_cat_module
 from .beast import rally_hound as rally_hound_module
 from .beast import rustfang_hyena as rustfang_hyena_module
 from .beast import storm_hydra as storm_hydra_module
@@ -15,8 +19,12 @@ from .demon import titan_of_cinders as titan_of_cinders_module
 from .dragon import chrono_dragon as chrono_dragon_module
 from .mech import bomb_bot as bomb_bot_module
 from .mech import clockwork_squire as clockwork_squire_module
+from .mech import cobalt_guardian as cobalt_guardian_module
+from .mech import deflect_o_bot as deflect_o_bot_module
 from .mech import iron_automaton as iron_automaton_module
+from .mech import junkbot as junkbot_module
 from .mech import king_of_rust as king_of_rust_module
+from .mech import scrap_imp as scrap_imp_module
 from .mech import soul_foundry as soul_foundry_module
 from .mech import void_engine as void_engine_module
 from .neutral import apex_mimic as apex_mimic_module
@@ -46,11 +54,14 @@ def _card(module: ModuleType) -> CardDef:
 stone_golem = _card(stone_golem_module)
 shield_bearer = _card(shield_bearer_module)
 clockwork_squire = _card(clockwork_squire_module)
+hunting_hound = _card(hunting_hound_module)
 ashen_rat = _card(ashen_rat_module)
 tavern_troublemaker = _card(tavern_troublemaker_module)
 mossback_turtle = _card(mossback_turtle_module)
 bomb_bot = _card(bomb_bot_module)
 banner_pup = _card(banner_pup_module)
+pack_leader = _card(pack_leader_module)
+scrap_imp = _card(scrap_imp_module)
 grave_picker = _card(grave_picker_module)
 rustfang_hyena = _card(rustfang_hyena_module)
 lantern_sprite = _card(lantern_sprite_module)
@@ -59,6 +70,9 @@ rally_hound = _card(rally_hound_module)
 iron_automaton = _card(iron_automaton_module)
 soul_collector = _card(soul_collector_module)
 static_idol = _card(static_idol_module)
+cobalt_guardian = _card(cobalt_guardian_module)
+deflect_o_bot = _card(deflect_o_bot_module)
+prowling_cat = _card(prowling_cat_module)
 pack_matron = _card(pack_matron_module)
 sky_duelist = _card(sky_duelist_module)
 siege_golem = _card(siege_golem_module)
@@ -72,6 +86,8 @@ phoenix_husk = _card(phoenix_husk_module)
 mirror_assassin = _card(mirror_assassin_module)
 titan_of_cinders = _card(titan_of_cinders_module)
 chrono_dragon = _card(chrono_dragon_module)
+junkbot = _card(junkbot_module)
+mama_bear = _card(mama_bear_module)
 soul_foundry = _card(soul_foundry_module)
 king_of_rust = _card(king_of_rust_module)
 apex_mimic = _card(apex_mimic_module)
@@ -80,11 +96,14 @@ BASIC_CARDS = [
     stone_golem,
     shield_bearer,
     clockwork_squire,
+    hunting_hound,
     ashen_rat,
     tavern_troublemaker,
     mossback_turtle,
     bomb_bot,
     banner_pup,
+    pack_leader,
+    scrap_imp,
     grave_picker,
     rustfang_hyena,
     lantern_sprite,
@@ -93,6 +112,9 @@ BASIC_CARDS = [
     iron_automaton,
     soul_collector,
     static_idol,
+    cobalt_guardian,
+    deflect_o_bot,
+    prowling_cat,
     pack_matron,
     sky_duelist,
     siege_golem,
@@ -106,6 +128,8 @@ BASIC_CARDS = [
     mirror_assassin,
     titan_of_cinders,
     chrono_dragon,
+    junkbot,
+    mama_bear,
     soul_foundry,
     king_of_rust,
     apex_mimic,
