@@ -45,6 +45,8 @@ class BuyPhase(Phase):
     # ── phase lifecycle ───────────────────────────────────────────────────────
 
     async def enter(self, match: Match) -> None:
+        from ..bot import run_bot_buy_phase
+
         if match.phase != "waiting":
             match.round += 1
         match.phase = "buy"
@@ -61,6 +63,11 @@ class BuyPhase(Phase):
             event = RoundStartEvent(round=match.round, owner=player)
             ctx.trigger("on_round_start", event)
             ctx.trigger_hero("on_round_start", event)
+
+        # Bots act and lock immediately
+        for player in match.players.values():
+            if player.is_bot and player.health > 0:
+                run_bot_buy_phase(player, match)
 
         await match.broadcast_state()
 
@@ -207,7 +214,12 @@ class BuyPhase(Phase):
         if player.pending_discover:
             return {"error": "resolve your discover first"}
         player.locked = True
-        if all(p.locked for p in match.players.values()):
+        # Phase ends early only when all alive human players have locked
+        alive_humans = [
+            p for p in match.players.values()
+            if not p.is_bot and p.health > 0
+        ]
+        if all(p.locked for p in alive_humans):
             match._phase_end.set()
         return {"ok": True}
 

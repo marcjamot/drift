@@ -120,6 +120,12 @@ class PlayerState:
     pending_discover: Optional[List[Minion]] = field(default=None)
     hero: Optional["HeroDef"] = field(default=None, repr=False)
     hero_power_uses_left: int = 0
+    # Multiplayer / bot fields
+    is_bot: bool = False
+    last_combat_board: List[dict] = field(default_factory=list)
+    mmr: int = 1000
+    eliminated_round: Optional[int] = None
+    placement: Optional[int] = None
 
     def start_round(self, round_num: int) -> None:
         self.max_gold = gold_for_round(round_num)
@@ -140,6 +146,7 @@ class PlayerState:
             "locked": self.locked,
             "board": [m.to_dict() for m in self.board],
             "hero": self.hero.to_dict() if self.hero else None,
+            "is_bot": self.is_bot,
         }
         if as_self:
             base.update(

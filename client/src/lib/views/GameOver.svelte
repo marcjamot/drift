@@ -5,19 +5,39 @@
 		onrestart: () => void;
 	}
 	let { onrestart }: Props = $props();
+
+	function ordinal(n: number): string {
+		if (n === 1) return "1st";
+		if (n === 2) return "2nd";
+		if (n === 3) return "3rd";
+		return `${n}th`;
+	}
+
+	const placement = $derived(gs.gameOverPlacement);
+	const mmrDelta = $derived(gs.gameOverMmrDelta);
 </script>
 
 <div class="game-over">
 	<div class="go-content">
-		{#if gs.gameOverWinner === gs.playerId}
+		{#if placement === 1}
 			<div class="go-result win">Victory</div>
-			<div class="go-sub">Well played, {gs.playerName}.</div>
-		{:else if gs.gameOverWinner}
-			<div class="go-result loss">Defeat</div>
+			<div class="go-sub">1st place — well played, {gs.playerName}.</div>
+		{:else if placement !== null && placement <= 4}
+			<div class="go-result win">{ordinal(placement)} Place</div>
+			<div class="go-sub">Top 4 finish!</div>
+		{:else if placement !== null}
+			<div class="go-result loss">{ordinal(placement)} Place</div>
 			<div class="go-sub">Better luck next time.</div>
 		{:else}
 			<div class="go-result">Game over</div>
 		{/if}
+
+		{#if mmrDelta !== null}
+			<div class="mmr-chip" class:gain={mmrDelta > 0} class:loss={mmrDelta < 0}>
+				{mmrDelta > 0 ? `+${mmrDelta}` : mmrDelta} MMR
+			</div>
+		{/if}
+
 		<button class="btn primary lg" onclick={onrestart}>Play again</button>
 	</div>
 </div>
@@ -31,12 +51,8 @@
 		animation: go-reveal 0.6s ease-out;
 	}
 	@keyframes go-reveal {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
+		from { opacity: 0; }
+		to { opacity: 1; }
 	}
 	.go-content {
 		display: flex;
@@ -60,6 +76,28 @@
 		font-size: 15px;
 		color: #b5a992;
 	}
+
+	.mmr-chip {
+		font-size: 22px;
+		font-weight: 800;
+		padding: 8px 24px;
+		border-radius: 999px;
+		border: 1px solid #3a4a3a;
+		background: #111a11;
+		color: #a0c0a0;
+	}
+	.mmr-chip.gain {
+		color: #80e880;
+		border-color: #3a6a3a;
+		background: #0e1a0e;
+		box-shadow: 0 0 20px 2px #80e88022;
+	}
+	.mmr-chip.loss {
+		color: #e88080;
+		border-color: #6a3a3a;
+		background: #1a0e0e;
+	}
+
 	.btn {
 		font-family: inherit;
 		font-size: 13px;

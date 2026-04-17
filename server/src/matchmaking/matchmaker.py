@@ -11,9 +11,12 @@ logger = logging.getLogger(__name__)
 Sender = Callable[[str], Awaitable[None]]
 _QueueEntry = Tuple[str, str, Sender]  # (player_id, name, send_fn)
 
+MATCH_SIZE = 8
+_BOT_NAMES = ["Grimshaw", "Vexara", "Ironpelt", "Solkar", "Brindle", "Mox", "Tesh"]
+
 
 class Matchmaker:
-    """Queues players and pairs them into matches."""
+    """Queues players and immediately pairs each into a match with 7 bots."""
 
     def __init__(self) -> None:
         self._queue: List[_QueueEntry] = []
@@ -24,38 +27,31 @@ class Matchmaker:
     async def queue(
         self, player_id: str, name: str, send_fn: Sender
     ) -> Optional[Match]:
-        """
-        Add player to the queue.  Returns a Match if pairing was possible,
-        otherwise None (player waits in queue).
-        """
+        """Add player to the queue; immediately creates a match with 7 bots."""
         async with self._lock:
             self._queue.append((player_id, name, send_fn))
+            entry: _QueueEntry = self._queue.pop(0)
+            return self._create_match_with_bots(entry)
 
-            if len(self._queue) >= 2:
-                p1: _QueueEntry = self._queue.pop(0)
-                p2: _QueueEntry = self._queue.pop(0)
-                return self._create_match(p1, p2)
-        return None
-
-    def _create_match(self, p1: _QueueEntry, p2: _QueueEntry) -> Match:
-        pid1, name1, send1 = p1
-        pid2, name2, send2 = p2
+    def _create_match_with_bots(self, human: _QueueEntry) -> Match:
+        pid, name, send_fn = human
 
         match_id: str = str(uuid.uuid4())
         players: List[PlayerState] = [
-            PlayerState(player_id=pid1, name=name1),
-            PlayerState(player_id=pid2, name=name2),
+            PlayerState(player_id=pid, name=name, is_bot=False)
         ]
+        for i in range(MATCH_SIZE - 1):
+            bot_id = f"bot_{uuid.uuid4().hex[:8]}"
+            players.append(PlayerState(player_id=bot_id, name=_BOT_NAMES[i], is_bot=True))
 
         match: Match = Match(match_id=match_id, players=players)
-        match.register_sender(pid1, send1)
-        match.register_sender(pid2, send2)
+        match.register_sender(pid, send_fn)
+        # Bots have no WS connection — no sender registered for them
 
         self._matches[match_id] = match
-        self._player_to_match[pid1] = match_id
-        self._player_to_match[pid2] = match_id
+        self._player_to_match[pid] = match_id
 
-        logger.info("Match %s: %s vs %s", match_id[:8], name1, name2)
+        logger.info("Match %s: %s vs 7 bots", match_id[:8], name)
         return match
 
     def get_match_for_player(self, player_id: str) -> Optional[Match]:
