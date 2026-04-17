@@ -50,6 +50,15 @@ export interface OpponentSnapshot {
 	locked: boolean;
 	board: MinionSnapshot[];
 	hero: HeroSnapshot | null;
+	is_bot: boolean;
+}
+
+export interface LeaderboardEntry {
+	player_id: string;
+	name: string;
+	health: number;
+	is_bot: boolean;
+	last_combat_board: MinionSnapshot[];
 }
 
 export type Phase = "buy" | "combat" | "game_over";

@@ -1,4 +1,4 @@
-import type { CombatEvent, CombatMeta, CombatResultMsg, HeroSnapshot, Intent, OpponentSnapshot, Phase, SelfSnapshot } from "./types.js";
+import type { CombatEvent, CombatMeta, CombatResultMsg, HeroSnapshot, Intent, LeaderboardEntry, OpponentSnapshot, Phase, SelfSnapshot } from "./types.js";
 
 export const gs = $state({
 	screen: "login" as "login" | "queued" | "hero_select" | "game" | "game_over",
@@ -6,18 +6,21 @@ export const gs = $state({
 	playerId: null as string | null,
 	playerName: null as string | null,
 	matchId: null as string | null,
-	opponentName: null as string | null,
 
 	round: 0,
 	phase: null as Phase | null,
 	buySecondsLeft: null as number | null,
 	self: null as SelfSnapshot | null,
 	opponent: null as OpponentSnapshot | null,
+	leaderboard: [] as LeaderboardEntry[],
 	combatLog: [] as CombatEvent[],
 	combatMeta: null as CombatMeta | null,
 	combatResult: null as CombatResultMsg | null,
 	error: null as string | null,
+	// Game-over info
 	gameOverWinner: null as string | null,
+	gameOverPlacement: null as number | null,
+	gameOverMmrDelta: null as number | null,
 	connected: false,
 	discoverOptions: null as import("./types.js").MinionSnapshot[] | null,
 	heroOptions: null as HeroSnapshot[] | null,
@@ -108,13 +111,16 @@ function handle(msg: Record<string, unknown>) {
 
 		case "match_start":
 			gs.matchId = msg.match_id as string;
-			gs.opponentName = msg.opponent as string;
 			gs.screen = "game";
 			gs.heroOptions = null;
 			gs.buySecondsLeft = null;
 			gs.combatLog = [];
 			gs.combatMeta = null;
 			gs.combatResult = null;
+			gs.leaderboard = [];
+			gs.gameOverWinner = null;
+			gs.gameOverPlacement = null;
+			gs.gameOverMmrDelta = null;
 			_frozenRound = -1;
 			_frozenOpponent = null;
 			return;
@@ -125,20 +131,20 @@ function handle(msg: Record<string, unknown>) {
 			gs.round = round;
 			gs.phase = phase;
 			gs.screen = phase === "game_over" ? "game_over" : "game";
-			gs.gameOverWinner = phase === "game_over" ? ((msg.winner as string | null) ?? null) : null;
 			gs.buySecondsLeft = phase === "buy" ? (msg.buy_seconds_left as number | null) : null;
 			gs.self = msg.self as SelfSnapshot;
+			gs.leaderboard = (msg.leaderboard as LeaderboardEntry[]) ?? [];
 
 			if (phase === "buy") {
 				startBuyTimer();
 				if (round !== _frozenRound) {
 					_frozenRound = round;
-					_frozenOpponent = msg.opponent as OpponentSnapshot;
+					_frozenOpponent = (msg.opponent as OpponentSnapshot) ?? null;
 				}
 				gs.opponent = _frozenOpponent;
 			} else {
 				stopBuyTimer();
-				gs.opponent = msg.opponent as OpponentSnapshot;
+				gs.opponent = (msg.opponent as OpponentSnapshot) ?? null;
 			}
 			return;
 		}
@@ -166,7 +172,9 @@ function handle(msg: Record<string, unknown>) {
 			return;
 
 		case "game_over":
-			gs.gameOverWinner = msg.winner as string;
+			gs.gameOverWinner = (msg.winner as string | null) ?? null;
+			gs.gameOverPlacement = (msg.placement as number | null) ?? null;
+			gs.gameOverMmrDelta = (msg.mmr_delta as number | null) ?? null;
 			gs.screen = "game_over";
 			gs.buySecondsLeft = null;
 			stopBuyTimer();
@@ -189,9 +197,6 @@ function handle(msg: Record<string, unknown>) {
 		case "action_result":
 			if ((msg.action as string) === "discover_pick" && !msg.error) {
 				gs.discoverOptions = null;
-			}
-			if ((msg.action as string) === "hero_pick" && !msg.error) {
-				// heroOptions cleared on match_start; just show waiting state
 			}
 			if (msg.error) {
 				gs.error = msg.error as string;

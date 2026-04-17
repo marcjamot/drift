@@ -2,6 +2,7 @@
 	import { gs, send } from "$lib/game/store.svelte.js";
 	import ShopView from "./shop/ShopView.svelte";
 	import CombatView from "./combat/CombatView.svelte";
+	import LeaderboardPanel from "./LeaderboardPanel.svelte";
 
 	let concedeArmed = $state(false);
 	let concedeTimer = 0;
@@ -39,20 +40,24 @@
 	}
 </script>
 
-{#if gs.self && gs.opponent}
+{#if gs.self}
 	<div class="game-shell" class:combat-mode={gs.phase === "combat"} class:buy-mode={gs.phase === "buy"}>
 		<header class="topbar">
 			<div class="identity">
 				<div class="nameplate">{gs.self.name}</div>
 				<div class="round-chip">Round {gs.round}</div>
 				<div class="health-chip" class:low={gs.self.health <= 15}>♥ {gs.self.health}</div>
-				<div class="health-chip enemy" class:low={gs.opponent.health <= 15}>
-					{gs.opponent.name} · ♥ {gs.opponent.health}
-				</div>
-				{#if gs.opponent.hero}
-					<div class="hero-chip enemy-hero" title={gs.opponent.hero.description}>
-						⚔ {gs.opponent.hero.name}
+				{#if gs.opponent}
+					<div class="health-chip enemy" class:low={gs.opponent.health <= 15}>
+						vs {gs.opponent.name} · ♥ {gs.opponent.health}
 					</div>
+					{#if gs.opponent.hero}
+						<div class="hero-chip enemy-hero" title={gs.opponent.hero.description}>
+							⚔ {gs.opponent.hero.name}
+						</div>
+					{/if}
+				{:else}
+					<div class="health-chip enemy">bye this round</div>
 				{/if}
 			</div>
 
@@ -86,11 +91,17 @@
 			</div>
 		{/if}
 
-		{#if !showCombat && gs.phase === "buy"}
-			<ShopView {healthFlash} />
-		{:else}
-			<CombatView {healthFlash} />
-		{/if}
+		<div class="game-body">
+			<LeaderboardPanel />
+
+			<div class="game-main">
+				{#if !showCombat && gs.phase === "buy"}
+					<ShopView {healthFlash} />
+				{:else}
+					<CombatView {healthFlash} />
+				{/if}
+			</div>
+		</div>
 	</div>
 {/if}
 
@@ -118,6 +129,7 @@
 		background: rgba(12, 15, 19, 0.78);
 		border: 1px solid #2f3944;
 		backdrop-filter: blur(10px);
+		flex-shrink: 0;
 	}
 	.identity,
 	.controls,
@@ -224,6 +236,21 @@
 	@keyframes bar-pulse {
 		0%, 100% { opacity: 1; }
 		50% { opacity: 0.55; }
+	}
+
+	.game-body {
+		display: flex;
+		gap: 14px;
+		flex: 1;
+		min-height: 0;
+	}
+
+	.game-main {
+		flex: 1;
+		min-width: 0;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.btn {
