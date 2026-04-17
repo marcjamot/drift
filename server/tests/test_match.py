@@ -11,7 +11,6 @@ BuyPhase.duration is set to 1 ms so the buy timer doesn't block.
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-import pytest
 
 from src.match.match import Match
 from src.match.phases.buy_phase import BuyPhase

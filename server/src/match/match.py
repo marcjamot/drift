@@ -127,6 +127,11 @@ class Match:
             self._combat_pairs[player_id] = opponent_id
             self._combat_pairs[opponent_id] = player_id
 
+    @property
+    def combat_pairs(self) -> dict[str, str]:
+        """Read-only view of this round's player_id → opponent_id pairings."""
+        return dict(self._combat_pairs)
+
     def apply_player_damage(self, player: PlayerState, amount: int) -> None:
         absorbed = min(player.armor, amount)
         player.armor -= absorbed

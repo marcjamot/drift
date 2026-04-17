@@ -4,9 +4,7 @@ Buy-phase economy tests.
 All tests call functions from src/match/actions.py directly — no async, no
 Match object required.  Each test names exactly one rule it is verifying.
 """
-import random
 
-import pytest
 
 from src.cards.catalog import CARD_CATALOG
 from src.player.player import (
@@ -17,7 +15,8 @@ from src.player.player import (
     compute_upgrade_cost,
 )
 from src.match import actions
-from .conftest import bare, card, make_player, make_pool, make_rng
+from src.match.triples import discover_pick
+from .conftest import make_player, make_pool, make_rng
 
 
 # ── gold / upgrade-cost formulas ──────────────────────────────────────────────
@@ -340,7 +339,7 @@ class TestTripleAndDiscover:
         actions.play(p, 0, pool, make_rng())
 
         chosen_id = p.pending_discover[1].card_id
-        actions.discover_pick(p, 1, pool, make_rng())
+        discover_pick(p, 1, pool, make_rng())
 
         assert p.pending_discover is None
         assert any(m.card_id == chosen_id for m in p.hand)
@@ -353,7 +352,7 @@ class TestTripleAndDiscover:
         actions.play(p, 0, pool, make_rng())
 
         size_before = len(pool.available)
-        actions.discover_pick(p, 0, pool, make_rng())
+        discover_pick(p, 0, pool, make_rng())
         # Two cards returned; one kept
         assert len(pool.available) == size_before + 2
 
@@ -364,11 +363,11 @@ class TestTripleAndDiscover:
             p.hand.append(CARD_CATALOG["shield_bearer"].create_instance())
         actions.play(p, 0, pool, make_rng())
 
-        result = actions.discover_pick(p, 99, pool, make_rng())
+        result = discover_pick(p, 99, pool, make_rng())
         assert "error" in result
         assert p.pending_discover is not None  # not consumed
 
     def test_discover_pick_fails_without_pending(self):
         p = make_player()
-        result = actions.discover_pick(p, 0, make_pool(), make_rng())
+        result = discover_pick(p, 0, make_pool(), make_rng())
         assert "error" in result

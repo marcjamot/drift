@@ -11,7 +11,7 @@ from src.cards.catalog import CARD_CATALOG
 from src.combat.engine import resolve_combat
 from src.heroes.catalog import MIRA, GREYHORN, SABLE
 from src.match import actions
-from .conftest import bare, card, make_player, make_pool, make_rng
+from .conftest import bare, make_player, make_pool, make_rng
 
 
 # ── Mira, the Nurturer (active_click) ────────────────────────────────────────
