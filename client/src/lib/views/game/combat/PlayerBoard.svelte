@@ -8,11 +8,13 @@
 		impactIds: Set<string>;
 		dyingIds: Set<string>;
 		newIds: Set<string>;
+		badgeTextById: Map<string, string>;
+		cleaveSplashIds: Set<string>;
 		cardStyles: Map<string, string>;
 		healthFlash: boolean;
 	}
 
-	let { minions, strickenIds, impactIds, dyingIds, newIds, cardStyles, healthFlash }: Props = $props();
+	let { minions, strickenIds, impactIds, dyingIds, newIds, badgeTextById, cleaveSplashIds, cardStyles, healthFlash }: Props = $props();
 </script>
 
 <div class="arena-row self-row" class:flash={healthFlash}>
@@ -27,6 +29,8 @@
 		attackDirection="up"
 		{dyingIds}
 		{newIds}
+		{badgeTextById}
+		{cleaveSplashIds}
 		{cardStyles}
 	/>
 </div>

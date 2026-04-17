@@ -22,6 +22,8 @@
 	let animImpact = $state(new Set<string>());
 	let animDying = $state(new Set<string>());
 	let animNewIds = $state(new Set<string>());
+	let animBadges = $state(new Map<string, string>());
+	let animCleaveSplash = $state(new Set<string>());
 	let animCardStyles = $state(new Map<string, string>());
 	let animText = $state("");
 	let animStarted = false;
@@ -63,6 +65,8 @@
 			animImpact = new Set();
 			animDying = new Set();
 			animNewIds = new Set();
+			animBadges = new Map();
+			animCleaveSplash = new Set();
 			animCardStyles = new Map();
 			clearDamageNumbers();
 			gs.combatLog = [];
@@ -98,6 +102,12 @@
 		animOppBoard = animOppBoard.map((m) =>
 			m.instance_id === id ? { ...m, attack: m.attack + atk, health: m.health + hp } : m
 		);
+	}
+
+	function insertMinion(board: MinionSnapshot[], minion: MinionSnapshot, position: number) {
+		const withoutExisting = board.filter((m) => m.instance_id !== minion.instance_id);
+		const idx = Math.max(0, Math.min(position, withoutExisting.length));
+		return [...withoutExisting.slice(0, idx), minion, ...withoutExisting.slice(idx)];
 	}
 
 	function applyLunge(attackerId: string, defenderId: string) {
@@ -193,6 +203,30 @@
 					await sleep(600);
 					setTimeout(() => (animNewIds = new Set()), 500);
 				}
+			} else if (e.type === "reborn_trigger") {
+				const m = e.minion;
+				const isOppSide = isSelfA ? e.player_idx === 1 : e.player_idx === 0;
+				if (isOppSide) animOppBoard = insertMinion(animOppBoard, m, e.position);
+				else animSelfBoard = insertMinion(animSelfBoard, m, e.position);
+				animNewIds = new Set([m.instance_id]);
+				animBadges = new Map([[m.instance_id, "Reborn!"]]);
+				animText = `${m.name} returns`;
+				await sleep(700);
+				animBadges = new Map();
+				animNewIds = new Set();
+			} else if (e.type === "cleave_splash") {
+				const targetIsOpp = animOppBoard.some((m) => m.instance_id === e.target_id);
+				if (e.amount > 0) spawnDmgNumber(e.target_id, e.amount, targetIsOpp);
+				animStricken = new Set([...animStricken, e.target_id]);
+				animImpact = new Set([...animImpact, e.target_id]);
+				animCleaveSplash = new Set([...animCleaveSplash, e.target_id]);
+				animText = "Cleave";
+				updateMinionState(e.target_id, e.remaining_health, e.remaining_divine_shield);
+				await sleep(260);
+				animImpact = new Set([...animImpact].filter((id) => id !== e.target_id));
+				animCleaveSplash = new Set([...animCleaveSplash].filter((id) => id !== e.target_id));
+				await sleep(120);
+				animStricken = new Set([...animStricken].filter((id) => id !== e.target_id));
 			} else if (e.type === "damage") {
 				const targetId = e.target_id as string;
 				const amount = e.amount as number;
@@ -205,8 +239,10 @@
 
 		animStricken = new Set();
 		animImpact = new Set();
+		animCleaveSplash = new Set();
 		animCardStyles = new Map();
 		animDying = new Set();
+		animBadges = new Map();
 		clearDamageNumbers();
 
 		const result = gs.combatResult;
@@ -233,6 +269,8 @@
 		impactIds={animImpact}
 		dyingIds={animDying}
 		newIds={animPhase !== "idle" ? animNewIds : new Set()}
+		badgeTextById={animBadges}
+		cleaveSplashIds={animCleaveSplash}
 		cardStyles={animCardStyles}
 	/>
 
@@ -262,6 +300,8 @@
 		impactIds={animImpact}
 		dyingIds={animDying}
 		newIds={animPhase !== "idle" ? animNewIds : new Set()}
+		badgeTextById={animBadges}
+		cleaveSplashIds={animCleaveSplash}
 		cardStyles={animCardStyles}
 		{healthFlash}
 	/>
