@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { gs, send } from "$lib/game/store.svelte.js";
-	import type { HeroSnapshot } from "$lib/game/types.js";
+	import { send } from "$lib/game/connection.svelte.js";
+	import { ui } from "$lib/game/ui.svelte.js";
 
 	const TIMEOUT = 30;
 
@@ -9,7 +9,7 @@
 	let waiting = $state(false);
 
 	$effect(() => {
-		if (!gs.heroOptions) return;
+		if (!ui.heroOptions) return;
 		// Reset state whenever a new hero_options arrives
 		picked = null;
 		waiting = false;
@@ -53,7 +53,7 @@
 	{/if}
 
 	<div class="cards">
-		{#each (gs.heroOptions ?? []) as hero, i (hero.id)}
+		{#each (ui.heroOptions ?? []) as hero, i (hero.id)}
 			<button
 				class="hero-card"
 				class:selected={picked === i}

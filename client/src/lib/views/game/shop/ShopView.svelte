@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { gs, send } from "$lib/game/store.svelte.js";
+	import { send } from "$lib/game/connection.svelte.js";
+	import { match } from "$lib/game/match.svelte.js";
 	import type { MinionSnapshot } from "$lib/game/types.js";
+	import { ui } from "$lib/game/ui.svelte.js";
 	import ShopRow from "./ShopRow.svelte";
 	import HandRow from "./HandRow.svelte";
 	import BoardRow from "./BoardRow.svelte";
@@ -28,8 +30,8 @@
 	let prevBoardIds = new Set<string>();
 
 	$effect(() => {
-		if (!gs.self) return;
-		const ids = gs.self.board.map((m) => m.instance_id);
+		if (!match.self) return;
+		const ids = match.self.board.map((m) => m.instance_id);
 		const added = ids.filter((id) => !prevBoardIds.has(id));
 		prevBoardIds = new Set(ids);
 		if (added.length === 0) return;
@@ -38,7 +40,7 @@
 	});
 
 	$effect(() => {
-		if (gs.phase !== "buy") clearDragState();
+		if (match.phase !== "buy") clearDragState();
 	});
 
 	function clearDragState() {
@@ -49,10 +51,10 @@
 
 	// Derive the instance_id of the card currently being dragged
 	const dragSourceId = $derived((): string | null => {
-		if (!dragSource || !gs.self) return null;
-		if (dragSource.origin === "shop") return gs.self.shop[dragSource.index]?.instance_id ?? null;
-		if (dragSource.origin === "hand") return gs.self.hand[dragSource.index]?.instance_id ?? null;
-		if (dragSource.origin === "board") return gs.self.board[dragSource.index]?.instance_id ?? null;
+		if (!dragSource || !match.self) return null;
+		if (dragSource.origin === "shop") return match.self.shop[dragSource.index]?.instance_id ?? null;
+		if (dragSource.origin === "hand") return match.self.hand[dragSource.index]?.instance_id ?? null;
+		if (dragSource.origin === "board") return match.self.board[dragSource.index]?.instance_id ?? null;
 		return null;
 	});
 	const ghostSourceIds = $derived(new Set(dragSourceId() ? [dragSourceId()!] : []));
@@ -77,15 +79,15 @@
 	}
 
 	function isHandFull() {
-		return !!gs.self && gs.self.hand.length >= HAND_LIMIT;
+		return !!match.self && match.self.hand.length >= HAND_LIMIT;
 	}
 
 	function isBoardFull() {
-		return !!gs.self && gs.self.board.length >= BOARD_LIMIT;
+		return !!match.self && match.self.board.length >= BOARD_LIMIT;
 	}
 
 	function getDropStatus(zone: "shop" | "board" | "hand") {
-		if (!dragSource || !gs.self) return null;
+		if (!dragSource || !match.self) return null;
 
 		if (zone === "shop") {
 			if (dragSource.origin === "board") return { valid: true, title: "Sell to shop", detail: "Gain 1 gold" };
@@ -95,7 +97,7 @@
 		if (zone === "hand") {
 			if (dragSource.origin !== "shop") return null;
 			if (isHandFull()) return null;
-			if (gs.self.gold < BUY_COST) return null;
+			if (match.self.gold < BUY_COST) return null;
 			return { valid: true, title: "Buy to hand", detail: `${dragSource.name} will be added to hand` };
 		}
 
@@ -107,26 +109,26 @@
 		}
 		if (dragSource.origin === "shop") {
 			if (isHandFull()) return null;
-			if (gs.self.gold < BUY_COST) return null;
+			if (match.self.gold < BUY_COST) return null;
 			return { valid: true, title: "Buy to hand", detail: `${dragSource.name} will be bought into hand` };
 		}
 		return null;
 	}
 
 	function canDrop(zone: "shop" | "board" | "hand") {
-		if (!dragSource || !gs.self) return false;
+		if (!dragSource || !match.self) return false;
 		if (zone === "shop") return dragSource.origin === "board";
-		if (zone === "hand") return dragSource.origin === "shop" && !isHandFull() && gs.self.gold >= BUY_COST;
+		if (zone === "hand") return dragSource.origin === "shop" && !isHandFull() && match.self.gold >= BUY_COST;
 		if (dragSource.origin === "hand") return !isBoardFull();
-		if (dragSource.origin === "shop") return !isHandFull() && gs.self.gold >= BUY_COST;
+		if (dragSource.origin === "shop") return !isHandFull() && match.self.gold >= BUY_COST;
 		return false;
 	}
 
 	function getBoardPreview() {
-		if (!gs.self) return [];
-		if (!dragSource || dragSource.origin !== "board") return gs.self.board;
-		if (boardDropTargetIndex === null || boardDropTargetIndex === dragSource.index) return gs.self.board;
-		const preview = [...gs.self.board];
+		if (!match.self) return [];
+		if (!dragSource || dragSource.origin !== "board") return match.self.board;
+		if (boardDropTargetIndex === null || boardDropTargetIndex === dragSource.index) return match.self.board;
+		const preview = [...match.self.board];
 		const [moved] = preview.splice(dragSource.index, 1);
 		preview.splice(Math.min(boardDropTargetIndex, preview.length), 0, moved);
 		return preview;
@@ -178,7 +180,7 @@
 	}
 
 	function dragShopCard(index: number, minion: MinionSnapshot, event: DragEvent) {
-		if (gs.phase !== "buy") return;
+		if (match.phase !== "buy") return;
 		event.dataTransfer?.setData("text/plain", `shop:${index}`);
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 		dragSource = { origin: "shop", index, name: minion.name };
@@ -187,8 +189,8 @@
 	}
 
 	function dragHandCard(index: number, event: DragEvent) {
-		if (gs.phase !== "buy" || !gs.self) return;
-		const minion = gs.self.hand[index];
+		if (match.phase !== "buy" || !match.self) return;
+		const minion = match.self.hand[index];
 		if (!minion) return;
 		event.dataTransfer?.setData("text/plain", `hand:${index}`);
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
@@ -198,8 +200,8 @@
 	}
 
 	function dragBoardCard(index: number, event: DragEvent) {
-		if (gs.phase !== "buy" || !gs.self) return;
-		const minion = gs.self.board[index];
+		if (match.phase !== "buy" || !match.self) return;
+		const minion = match.self.board[index];
 		if (!minion) return;
 		event.dataTransfer?.setData("text/plain", `board:${index}`);
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
@@ -230,16 +232,16 @@
 	}
 </script>
 
-{#if gs.discoverOptions}
-	<DiscoverModal options={gs.discoverOptions} />
+{#if ui.discoverOptions}
+	<DiscoverModal options={ui.discoverOptions} />
 {/if}
 
-{#if gs.self}
+{#if match.self}
 	<div class="buy-layout" class:flash={healthFlash}>
 		<!-- Hero info panel -->
-		{#if gs.self.hero}
-			{@const hero = gs.self.hero}
-			{@const usesLeft = gs.self.hero_power_uses_left}
+		{#if match.self.hero}
+			{@const hero = match.self.hero}
+			{@const usesLeft = match.self.hero_power_uses_left}
 			{@const isActive = hero.power_type !== "passive"}
 			{@const canActivate = isActive && usesLeft > 0 && heroTargeting === null}
 			<div class="hero-info-bar">
@@ -292,7 +294,7 @@
 			ondrop={(event) => dropOnZone("shop", event)}
 		>
 			<ShopRow
-				self={gs.self}
+				self={match.self}
 				cardsDraggable={true}
 				ghostSourceShopIndex={dragSource?.origin === "shop" ? dragSource.index : null}
 				oncarddragstart={dragShopCard}
@@ -318,7 +320,7 @@
 			ondrop={(event) => dropOnZone("board", event)}
 		>
 			<BoardRow
-				self={gs.self}
+				self={match.self}
 				boardPreview={getBoardPreview()}
 				newIds={newBoardIds}
 				cardsDraggable={true}
@@ -343,7 +345,7 @@
 			ondrop={(event) => dropOnZone("hand", event)}
 		>
 			<HandRow
-				hand={gs.self.hand}
+				hand={match.self.hand}
 				cardsDraggable={true}
 				{ghostSourceIds}
 				oncarddragstart={dragHandCard}

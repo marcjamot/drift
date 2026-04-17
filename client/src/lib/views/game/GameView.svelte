@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { gs, send } from "$lib/game/store.svelte.js";
+	import { combat } from "$lib/game/combat.svelte.js";
+	import { send } from "$lib/game/connection.svelte.js";
+	import { match } from "$lib/game/match.svelte.js";
 	import ShopView from "./shop/ShopView.svelte";
 	import CombatView from "./combat/CombatView.svelte";
 	import LeaderboardPanel from "./LeaderboardPanel.svelte";
@@ -10,8 +12,8 @@
 	let prevHealth = -1;
 
 	$effect(() => {
-		if (!gs.self) return;
-		const h = gs.self.health;
+		if (!match.self) return;
+		const h = match.self.health;
 		if (prevHealth !== -1 && h < prevHealth) {
 			healthFlash = true;
 			setTimeout(() => (healthFlash = false), 900);
@@ -21,7 +23,7 @@
 
 	// Show combat while phase is combat OR while combatMeta exists (animation in progress / holding result).
 	// CombatView clears combatMeta when it's fully done, which drops this back to false.
-	const showCombat = $derived(gs.phase === "combat" || gs.combatMeta !== null);
+	const showCombat = $derived(match.phase === "combat" || combat.combatMeta !== null);
 
 	function lock() {
 		send({ type: "lock" });
@@ -40,20 +42,20 @@
 	}
 </script>
 
-{#if gs.self}
-	<div class="game-shell" class:combat-mode={gs.phase === "combat"} class:buy-mode={gs.phase === "buy"}>
+{#if match.self}
+	<div class="game-shell" class:combat-mode={match.phase === "combat"} class:buy-mode={match.phase === "buy"}>
 		<header class="topbar">
 			<div class="identity">
-				<div class="nameplate">{gs.self.name}</div>
-				<div class="round-chip">Round {gs.round}</div>
-				<div class="health-chip" class:low={gs.self.health <= 15}>♥ {gs.self.health}</div>
-				{#if gs.opponent}
-					<div class="health-chip enemy" class:low={gs.opponent.health <= 15}>
-						vs {gs.opponent.name} · ♥ {gs.opponent.health}
+				<div class="nameplate">{match.self.name}</div>
+				<div class="round-chip">Round {match.round}</div>
+				<div class="health-chip" class:low={match.self.health <= 15}>♥ {match.self.health}</div>
+				{#if match.opponent}
+					<div class="health-chip enemy" class:low={match.opponent.health <= 15}>
+						vs {match.opponent.name} · ♥ {match.opponent.health}
 					</div>
-					{#if gs.opponent.hero}
-						<div class="hero-chip enemy-hero" title={gs.opponent.hero.description}>
-							⚔ {gs.opponent.hero.name}
+					{#if match.opponent.hero}
+						<div class="hero-chip enemy-hero" title={match.opponent.hero.description}>
+							⚔ {match.opponent.hero.name}
 						</div>
 					{/if}
 				{:else}
@@ -61,16 +63,16 @@
 				{/if}
 			</div>
 
-			{#if !showCombat && gs.phase === "buy"}
+			{#if !showCombat && match.phase === "buy"}
 				<div class="controls">
-					<span class="turn-timer" class:urgent={(gs.buySecondsLeft ?? 99) <= 10}>
-						{gs.buySecondsLeft ?? 0}s
+					<span class="turn-timer" class:urgent={(match.buySecondsLeft ?? 99) <= 10}>
+						{match.buySecondsLeft ?? 0}s
 					</span>
 					<button class="btn concede" onclick={concede}>
 						{concedeArmed ? "Confirm?" : "Concede"}
 					</button>
-					<button class="btn end-turn" onclick={lock} disabled={gs.self.locked}>
-						{gs.self.locked ? "✓ Waiting…" : "End Turn"}
+					<button class="btn end-turn" onclick={lock} disabled={match.self.locked}>
+						{match.self.locked ? "✓ Waiting…" : "End Turn"}
 					</button>
 				</div>
 			{:else}
@@ -80,8 +82,8 @@
 			{/if}
 		</header>
 
-		{#if !showCombat && gs.phase === "buy" && (gs.buySecondsLeft ?? 99) <= 20}
-			{@const pct = ((gs.buySecondsLeft ?? 0) / 20) * 100}
+		{#if !showCombat && match.phase === "buy" && (match.buySecondsLeft ?? 99) <= 20}
+			{@const pct = ((match.buySecondsLeft ?? 0) / 20) * 100}
 			<div class="countdown-bar-track">
 				<div
 					class="countdown-bar"
@@ -95,7 +97,7 @@
 			<LeaderboardPanel />
 
 			<div class="game-main">
-				{#if !showCombat && gs.phase === "buy"}
+				{#if !showCombat && match.phase === "buy"}
 					<ShopView {healthFlash} />
 				{:else}
 					<CombatView {healthFlash} />

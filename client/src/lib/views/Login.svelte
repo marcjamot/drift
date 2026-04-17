@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { gs, send } from "$lib/game/store.svelte.js";
+	import { connection, send } from "$lib/game/connection.svelte.js";
 
 	let nameInput = $state("");
 
@@ -13,7 +13,7 @@
 	<h1 class="wordmark">drift</h1>
 	<p class="tagline">a tavern game</p>
 
-	{#if !gs.playerId}
+	{#if !connection.playerId}
 		<form
 			class="login-form"
 			onsubmit={(e) => {
@@ -26,14 +26,14 @@
 				bind:value={nameInput}
 				placeholder="your name"
 				maxlength="20"
-				disabled={!gs.connected}
+				disabled={!connection.connected}
 			/>
-			<button type="submit" class="btn primary" disabled={!gs.connected || !nameInput.trim()}>
+			<button type="submit" class="btn primary" disabled={!connection.connected || !nameInput.trim()}>
 				Continue
 			</button>
 		</form>
 	{:else}
-		<p class="greeting">Hi, <strong>{gs.playerName}</strong></p>
+		<p class="greeting">Hi, <strong>{connection.playerName}</strong></p>
 		<button class="btn primary lg" onclick={() => send({ type: "queue" })}>Find a match</button>
 	{/if}
 </div>
