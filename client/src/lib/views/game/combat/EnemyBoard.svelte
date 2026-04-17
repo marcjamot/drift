@@ -8,10 +8,12 @@
 		impactIds: Set<string>;
 		dyingIds: Set<string>;
 		newIds: Set<string>;
+		badgeTextById: Map<string, string>;
+		cleaveSplashIds: Set<string>;
 		cardStyles: Map<string, string>;
 	}
 
-	let { minions, strickenIds, impactIds, dyingIds, newIds, cardStyles }: Props = $props();
+	let { minions, strickenIds, impactIds, dyingIds, newIds, badgeTextById, cleaveSplashIds, cardStyles }: Props = $props();
 </script>
 
 <div class="arena-row opp-row">
@@ -26,6 +28,8 @@
 		attackDirection="down"
 		{dyingIds}
 		{newIds}
+		{badgeTextById}
+		{cleaveSplashIds}
 		{cardStyles}
 	/>
 </div>

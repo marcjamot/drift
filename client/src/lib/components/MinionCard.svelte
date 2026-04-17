@@ -14,6 +14,8 @@
 		dying?: boolean;
 		isNew?: boolean;
 		ghostSource?: boolean;
+		badgeText?: string;
+		cleaveSplash?: boolean;
 		lungeStyle?: string;
 		onclick?: () => void;
 		ondragstart?: (event: DragEvent) => void;
@@ -33,6 +35,8 @@
 		dying = false,
 		isNew = false,
 		ghostSource = false,
+		badgeText = "",
+		cleaveSplash = false,
 		lungeStyle = "",
 		onclick,
 		ondragstart,
@@ -57,6 +61,7 @@
 	class:dying
 	class:is-new={isNew}
 	class:ghost-source={ghostSource}
+	class:cleave-splash={cleaveSplash}
 	style={lungeStyle}
 	{draggable}
 	{onclick}
@@ -87,6 +92,9 @@
 		</span>
 	</div>
 	{#if minion.golden}<div class="star">★</div>{/if}
+	{#if badgeText}
+		<div class="combat-badge">{badgeText}</div>
+	{/if}
 	{#if minion.description}
 		<div class="tooltip">{minion.description}</div>
 	{/if}
@@ -261,6 +269,18 @@
 		pointer-events: none;
 	}
 
+	.minion-card.cleave-splash {
+		box-shadow: 0 0 26px 7px #d1ec4d99;
+		border-color: #d1ec4d;
+		animation: cleave-pulse 0.44s ease-out;
+	}
+
+	@keyframes cleave-pulse {
+		0% { transform: scale(1); filter: brightness(1); }
+		38% { transform: scale(1.08); filter: brightness(1.45); }
+		100% { transform: scale(1); filter: brightness(1); }
+	}
+
 	.minion-card.size-small {
 		width: 86px;
 		min-height: 108px;
@@ -360,6 +380,28 @@
 		right: 8px;
 		font-size: 14px;
 		color: #d4a020;
+	}
+	.combat-badge {
+		position: absolute;
+		left: 50%;
+		top: -14px;
+		transform: translateX(-50%);
+		padding: 4px 8px;
+		border-radius: 8px;
+		background: #10291a;
+		border: 1px solid #5fd37c;
+		color: #d7ffdf;
+		font-size: 11px;
+		font-weight: 800;
+		white-space: nowrap;
+		box-shadow: 0 4px 14px #00000066;
+		animation: badge-pop 0.7s ease-out both;
+		z-index: 5;
+	}
+	@keyframes badge-pop {
+		0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.8); }
+		25% { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.08); }
+		100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 	}
 	.minion-card.size-small .star {
 		font-size: 11px;

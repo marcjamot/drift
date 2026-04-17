@@ -278,6 +278,57 @@ def _advance_attacker_idx(board: List[Minion], previous_idx: int, attacker_id: s
     return previous_idx % len(board)
 
 
+def _deal_combat_damage(source: Minion, target: Minion, amount: int) -> int:
+    damage: int = target.take_damage(amount)
+    if damage > 0 and "poisonous" in source.keywords:
+        target.health = 0
+    return damage
+
+
+def _dispatch_damage(
+    boards: List[List[Minion]],
+    events: List[CombatEvent],
+    heroes: List[Optional[HeroDef]],
+    subject: Minion,
+    subject_side: int,
+    actor: Minion,
+    actor_side: int,
+    amount: int,
+) -> None:
+    damage_event = DamageEvent(
+        subject=subject,
+        subject_side=subject_side,
+        actor=actor,
+        actor_side=actor_side,
+        target=subject,
+        target_side=subject_side,
+        amount=amount,
+    )
+    _dispatch_hooks(boards, events, "on_damage", damage_event, subject=subject)
+    _dispatch_hero_hooks(boards, events, "on_damage", damage_event, heroes, subject_side=subject_side)
+
+
+def _dispatch_kill(
+    boards: List[List[Minion]],
+    events: List[CombatEvent],
+    heroes: List[Optional[HeroDef]],
+    killer: Minion,
+    killer_side: int,
+    target: Minion,
+    target_side: int,
+) -> None:
+    kill_event = KillEvent(
+        actor=killer,
+        actor_side=killer_side,
+        target=target,
+        target_side=target_side,
+        subject=killer,
+        subject_side=killer_side,
+    )
+    _dispatch_hooks(boards, events, "on_kill", kill_event, subject=killer)
+    _dispatch_hero_hooks(boards, events, "on_kill", kill_event, heroes, subject_side=killer_side)
+
+
 def _resolve_deaths(
     boards: List[List[Minion]],
     events: List[CombatEvent],
@@ -295,6 +346,7 @@ def _resolve_deaths(
             for corpse in dead:
                 if corpse not in board:
                     continue
+                corpse_idx = board.index(corpse)
                 resolved_any = True
                 events.append(
                     {
@@ -316,6 +368,21 @@ def _resolve_deaths(
                 _dispatch_hero_hooks(boards, events, "on_death", death_event, heroes, subject_side=side)
                 if corpse in board:
                     board.remove(corpse)
+                if "reborn" in corpse.keywords and len(board) < BOARD_SIZE:
+                    reborn = corpse.copy()
+                    reborn.health = 1
+                    reborn.keywords.discard("reborn")
+                    board.insert(min(corpse_idx, len(board)), reborn)
+                    events.append(
+                        {
+                            "type": "reborn_trigger",
+                            "minion_id": reborn.instance_id,
+                            "minion_name": reborn.name,
+                            "player_idx": side,
+                            "position": min(corpse_idx, len(board) - 1),
+                            "minion": reborn.to_dict(),
+                        }
+                    )
 
         if not resolved_any:
             break
@@ -348,6 +415,7 @@ def resolve_combat(
     else:
         current = rng.choice([0, 1])
     next_attacker_idx: List[int] = [0, 0]
+    windfury_pending: set[str] = set()
 
     for _ in range(100):
         if not boards[0] or not boards[1]:
@@ -388,43 +456,25 @@ def resolve_combat(
         _dispatch_hooks(boards, events, "on_attack", attack_event, subject=attacker)
         _dispatch_hero_hooks(boards, events, "on_attack", attack_event, heroes, subject_side=current)
 
-        damage_to_attacker: int = attacker.take_damage(defender.attack)
-        damage_to_defender: int = defender.take_damage(attacker.attack)
+        defender_idx = boards[1 - current].index(defender) if defender in boards[1 - current] else -1
+        cleave_targets: List[Minion] = []
+        if "cleave" in attacker.keywords and defender_idx >= 0:
+            for idx in (defender_idx - 1, defender_idx + 1):
+                if 0 <= idx < len(boards[1 - current]):
+                    target = boards[1 - current][idx]
+                    if target.is_alive():
+                        cleave_targets.append(target)
 
-        dmg_attacker = DamageEvent(
-            subject=attacker, subject_side=current,
-            actor=defender, actor_side=1 - current,
-            target=attacker, target_side=current,
-            amount=damage_to_attacker,
-        )
-        _dispatch_hooks(boards, events, "on_damage", dmg_attacker, subject=attacker)
-        _dispatch_hero_hooks(boards, events, "on_damage", dmg_attacker, heroes, subject_side=current)
+        damage_to_attacker: int = _deal_combat_damage(defender, attacker, defender.attack)
+        damage_to_defender: int = _deal_combat_damage(attacker, defender, attacker.attack)
 
-        dmg_defender = DamageEvent(
-            subject=defender, subject_side=1 - current,
-            actor=attacker, actor_side=current,
-            target=defender, target_side=1 - current,
-            amount=damage_to_defender,
-        )
-        _dispatch_hooks(boards, events, "on_damage", dmg_defender, subject=defender)
-        _dispatch_hero_hooks(boards, events, "on_damage", dmg_defender, heroes, subject_side=1 - current)
+        _dispatch_damage(boards, events, heroes, attacker, current, defender, 1 - current, damage_to_attacker)
+        _dispatch_damage(boards, events, heroes, defender, 1 - current, attacker, current, damage_to_defender)
 
         if damage_to_defender > 0 and not defender.is_alive():
-            kill_event = KillEvent(
-                actor=attacker, actor_side=current,
-                target=defender, target_side=1 - current,
-                subject=attacker, subject_side=current,
-            )
-            _dispatch_hooks(boards, events, "on_kill", kill_event, subject=attacker)
-            _dispatch_hero_hooks(boards, events, "on_kill", kill_event, heroes, subject_side=current)
+            _dispatch_kill(boards, events, heroes, attacker, current, defender, 1 - current)
         if damage_to_attacker > 0 and not attacker.is_alive():
-            kill_event = KillEvent(
-                actor=defender, actor_side=1 - current,
-                target=attacker, target_side=current,
-                subject=defender, subject_side=1 - current,
-            )
-            _dispatch_hooks(boards, events, "on_kill", kill_event, subject=defender)
-            _dispatch_hero_hooks(boards, events, "on_kill", kill_event, heroes, subject_side=1 - current)
+            _dispatch_kill(boards, events, heroes, defender, 1 - current, attacker, current)
 
         events.append(
             {
@@ -440,7 +490,40 @@ def resolve_combat(
             }
         )
 
+        for splash_target in cleave_targets:
+            if splash_target not in boards[1 - current] or not splash_target.is_alive():
+                continue
+            splash_damage = _deal_combat_damage(attacker, splash_target, attacker.attack)
+            _dispatch_damage(boards, events, heroes, splash_target, 1 - current, attacker, current, splash_damage)
+            if splash_damage > 0 and not splash_target.is_alive():
+                _dispatch_kill(boards, events, heroes, attacker, current, splash_target, 1 - current)
+            events.append(
+                {
+                    "type": "cleave_splash",
+                    "attacker_id": attacker.instance_id,
+                    "attacker_name": attacker.name,
+                    "target_id": splash_target.instance_id,
+                    "target_name": splash_target.name,
+                    "amount": splash_damage,
+                    "remaining_health": splash_target.health,
+                    "remaining_divine_shield": splash_target.divine_shield,
+                }
+            )
+
         _resolve_deaths(boards, events, heroes, killer=attacker, killer_side=current)
+        attacker_alive = any(
+            minion.instance_id == attacker.instance_id and minion.is_alive()
+            for minion in boards[current]
+        )
+        if (
+            attacker_alive
+            and "windfury" in attacker.keywords
+            and attacker.instance_id not in windfury_pending
+        ):
+            windfury_pending.add(attacker.instance_id)
+            continue
+
+        windfury_pending.discard(attacker.instance_id)
         next_attacker_idx[current] = _advance_attacker_idx(
             boards[current], attacker_idx, attacker.instance_id
         )

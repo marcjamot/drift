@@ -17,6 +17,8 @@
 		showHealthLeft?: boolean;
 		dyingIds?: Set<string>;
 		newIds?: Set<string>;
+		badgeTextById?: Map<string, string>;
+		cleaveSplashIds?: Set<string>;
 		/** Per-card inline style strings for JS-driven transforms (e.g. lunge). */
 		cardStyles?: Map<string, string>;
 		/** Instance IDs of cards currently being dragged (render as ghost). */
@@ -45,6 +47,8 @@
 		showHealthLeft = false,
 		dyingIds = new Set(),
 		newIds = new Set(),
+		badgeTextById = new Map(),
+		cleaveSplashIds = new Set(),
 		cardStyles = new Map(),
 		ghostSourceIds = new Set<string>(),
 		bare = false,
@@ -82,6 +86,8 @@
 					dying={dyingIds.has(minion.instance_id)}
 					isNew={newIds.has(minion.instance_id)}
 					ghostSource={ghostSourceIds.has(minion.instance_id)}
+					badgeText={badgeTextById.get(minion.instance_id) ?? ""}
+					cleaveSplash={cleaveSplashIds.has(minion.instance_id)}
 					lungeStyle={cardStyles.get(minion.instance_id) ?? ""}
 					onclick={selectable ? () => onselect?.(i) : undefined}
 					ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, event) : undefined}

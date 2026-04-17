@@ -64,10 +64,78 @@ export interface LeaderboardEntry {
 
 export type Phase = "buy" | "combat" | "game_over";
 
-export interface CombatEvent {
-	type: string;
-	[key: string]: unknown;
-}
+export type CombatEvent =
+	| {
+			type: "attack";
+			attacker_id: string;
+			attacker_name: string;
+			attacker_attack: number;
+			defender_id: string;
+			defender_name: string;
+			defender_attack: number;
+	  }
+	| {
+			type: "damage_dealt";
+			attacker_id: string;
+			attacker_remaining_hp: number;
+			attacker_divine_shield: boolean;
+			damage_to_attacker: number;
+			defender_id: string;
+			defender_remaining_hp: number;
+			defender_divine_shield: boolean;
+			damage_to_defender: number;
+	  }
+	| {
+			type: "damage";
+			target_id: string;
+			target_name: string;
+			amount: number;
+			remaining_health: number;
+			remaining_divine_shield: boolean;
+	  }
+	| {
+			type: "death";
+			minion_id: string;
+			minion_name: string;
+			player_idx: number;
+	  }
+	| {
+			type: "reborn_trigger";
+			minion_id: string;
+			minion_name: string;
+			player_idx: number;
+			position: number;
+			minion: MinionSnapshot;
+	  }
+	| {
+			type: "cleave_splash";
+			attacker_id: string;
+			attacker_name: string;
+			target_id: string;
+			target_name: string;
+			amount: number;
+			remaining_health: number;
+			remaining_divine_shield: boolean;
+	  }
+	| {
+			type: "buff";
+			target_id: string;
+			target_name: string;
+			attack: number;
+			health: number;
+	  }
+	| {
+			type: "summon";
+			card_id: string;
+			minion: MinionSnapshot;
+			side: number;
+			to_enemy: boolean;
+	  }
+	| {
+			type: "keyword_added";
+			target_id: string;
+			keyword: string;
+	  };
 
 export interface CombatMeta {
 	players: [string, string];
