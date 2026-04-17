@@ -262,7 +262,7 @@
 
 <div class="battle-arena" class:shaking={animShake} bind:this={arenaEl}>
 	{#if match.opponent}
-		<EnemyInfo name={match.opponent.name} health={match.opponent.health} hero={match.opponent.hero ?? null} />
+		<EnemyInfo name={match.opponent.name} health={match.opponent.health} armor={match.opponent.armor} hero={match.opponent.hero ?? null} />
 	{/if}
 
 	<EnemyBoard
@@ -309,7 +309,7 @@
 	/>
 
 	{#if match.self}
-		<PlayerInfo name={match.self.name} health={match.self.health} hero={match.self.hero ?? null} />
+		<PlayerInfo name={match.self.name} health={match.self.health} armor={match.self.armor} hero={match.self.hero ?? null} />
 	{/if}
 
 	{#each dmgNumbers as n (n.id)}

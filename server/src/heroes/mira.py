@@ -21,6 +21,7 @@ HERO = HeroDef(
     id="mira",
     name="Mira, the Nurturer",
     description="Give all friendly minions +1/+1.",
+    armor=0,
     hero_power_type="active_click",
     hero_power=_hero_power,
 )

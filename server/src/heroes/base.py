@@ -27,6 +27,7 @@ class HeroDef:
     id: str
     name: str
     description: str
+    armor: int = 0
 
     # Power classification — determines UI and dispatch behaviour
     hero_power_type: str = "passive"   # see constants above

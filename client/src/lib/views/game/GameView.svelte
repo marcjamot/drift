@@ -48,10 +48,12 @@
 			<div class="identity">
 				<div class="nameplate">{match.self.name}</div>
 				<div class="round-chip">Round {match.round}</div>
-				<div class="health-chip" class:low={match.self.health <= 15}>♥ {match.self.health}</div>
+				<div class="health-chip" class:low={match.self.health <= 15}>
+					♥ {match.self.health}{#if match.self.armor > 0} / 🛡 {match.self.armor}{/if}
+				</div>
 				{#if match.opponent}
 					<div class="health-chip enemy" class:low={match.opponent.health <= 15}>
-						vs {match.opponent.name} · ♥ {match.opponent.health}
+						vs {match.opponent.name} · ♥ {match.opponent.health}{#if match.opponent.armor > 0} / 🛡 {match.opponent.armor}{/if}
 					</div>
 					{#if match.opponent.hero}
 						<div class="hero-chip enemy-hero" title={match.opponent.hero.description}>

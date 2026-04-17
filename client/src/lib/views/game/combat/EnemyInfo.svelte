@@ -4,16 +4,17 @@
 	interface Props {
 		name: string;
 		health: number;
+		armor: number;
 		hero: HeroSnapshot | null;
 	}
-	let { name, health, hero }: Props = $props();
+	let { name, health, armor, hero }: Props = $props();
 </script>
 
 <div class="opp-plate">
 	<div class="arena-nameplate">
 		<span class="arena-kicker">Enemy</span>
 		<span class="arena-name">{name}</span>
-		<span class="arena-hp" class:low={health <= 15}>♥ {health}</span>
+		<span class="arena-hp" class:low={health <= 15}>♥ {health}{#if armor > 0} / 🛡 {armor}{/if}</span>
 	</div>
 	{#if hero}
 		<div class="hero-row">

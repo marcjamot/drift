@@ -125,6 +125,7 @@ class PlayerState:
     player_id: str
     name: str
     health: int = 40
+    armor: int = 0
     gold: int = 0
     max_gold: int = 0
     tavern_tier: int = 1
@@ -144,6 +145,11 @@ class PlayerState:
     eliminated_round: Optional[int] = None
     placement: Optional[int] = None
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        object.__setattr__(self, name, value)
+        if name == "hero" and value is not None:
+            object.__setattr__(self, "armor", value.armor)
+
     def start_round(self, round_num: int) -> None:
         self.max_gold = gold_for_round(round_num)
         self.gold = self.max_gold
@@ -159,6 +165,7 @@ class PlayerState:
             "player_id": self.player_id,
             "name": self.name,
             "health": self.health,
+            "armor": self.armor,
             "tavern_tier": self.tavern_tier,
             "locked": self.locked,
             "board": [m.to_dict() for m in self.board],

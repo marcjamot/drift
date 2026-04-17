@@ -22,6 +22,7 @@ HERO = HeroDef(
     id="sable",
     name="Sable, the Drifter",
     description="At the start of combat, give all your minions +0/+1.",
+    armor=5,
     hero_power_type="passive",
     on_combat_start=_on_combat_start,
 )

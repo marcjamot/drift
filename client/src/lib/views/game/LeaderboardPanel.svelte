@@ -39,7 +39,7 @@
 					{#if isDead}
 						<span class="dead-label">eliminated</span>
 					{:else}
-						♥ {entry.health}
+						♥ {entry.health}{#if entry.armor > 0} / 🛡 {entry.armor}{/if}
 					{/if}
 				</div>
 			</div>

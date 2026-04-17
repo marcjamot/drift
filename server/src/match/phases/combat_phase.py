@@ -80,9 +80,9 @@ class CombatPhase(Phase):
             winner_idx: Optional[int] = result["winner"]
             damage: int = result["damage"]
             if winner_idx == 0:
-                p_b.health -= damage
+                match.apply_player_damage(p_b, damage)
             elif winner_idx == 1:
-                p_a.health -= damage
+                match.apply_player_damage(p_a, damage)
 
             # 4. Send combat_log to any human in this pair
             for human_pid in [pid_a, pid_b]:

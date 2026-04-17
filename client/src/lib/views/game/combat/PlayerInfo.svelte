@@ -4,9 +4,10 @@
 	interface Props {
 		name: string;
 		health: number;
+		armor: number;
 		hero: HeroSnapshot | null;
 	}
-	let { name, health, hero }: Props = $props();
+	let { name, health, armor, hero }: Props = $props();
 </script>
 
 <div class="self-plate">
@@ -20,7 +21,7 @@
 	<div class="arena-nameplate">
 		<span class="arena-kicker">You</span>
 		<span class="arena-name">{name}</span>
-		<span class="arena-hp" class:low={health <= 15}>♥ {health}</span>
+		<span class="arena-hp" class:low={health <= 15}>♥ {health}{#if armor > 0} / 🛡 {armor}{/if}</span>
 	</div>
 </div>
 
