@@ -49,6 +49,11 @@
 				<div class="health-chip enemy" class:low={gs.opponent.health <= 15}>
 					{gs.opponent.name} · ♥ {gs.opponent.health}
 				</div>
+				{#if gs.opponent.hero}
+					<div class="hero-chip enemy-hero" title={gs.opponent.hero.description}>
+						⚔ {gs.opponent.hero.name}
+					</div>
+				{/if}
 			</div>
 
 			{#if !showCombat && gs.phase === "buy"}
@@ -143,6 +148,31 @@
 	}
 	.health-chip.enemy {
 		color: #d9ccbb;
+	}
+
+	.hero-chip {
+		padding: 6px 12px;
+		border-radius: 999px;
+		border: 1px solid #4a5a6a;
+		background: #1a2030;
+		font-size: 12px;
+		font-weight: 600;
+		cursor: default;
+		white-space: nowrap;
+		transition: border-color 0.15s, background 0.15s;
+	}
+	.hero-chip:hover {
+		border-color: #8fa8c8;
+		background: #222d40;
+	}
+	.hero-chip.enemy-hero {
+		color: #d4b8a0;
+		border-color: #4a3a2a;
+		background: #1e1810;
+	}
+	.hero-chip.enemy-hero:hover {
+		border-color: #8a6a4a;
+		background: #2a2015;
 	}
 
 	.turn-timer {

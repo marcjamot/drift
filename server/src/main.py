@@ -84,16 +84,6 @@ async def handler(ws: Any) -> None:
                 match = await matchmaker.queue(player_id, name, make_sender())
 
                 if match:
-                    for pid in match.player_order:
-                        opp_id: str = match._opponent(pid)
-                        await match.send_to(
-                            pid,
-                            {
-                                "type": "match_start",
-                                "match_id": match.match_id,
-                                "opponent": match.players[opp_id].name,
-                            },
-                        )
                     asyncio.create_task(match.run())
 
             else:

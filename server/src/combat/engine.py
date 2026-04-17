@@ -22,6 +22,7 @@ from ..cards.base import (
     TargetEvent,
     TriggerCtx,
 )
+from ..heroes.base import HeroDef
 from ..player import BOARD_SIZE
 
 CombatEvent = dict[str, Any]
@@ -218,6 +219,38 @@ def _dispatch_hooks(
             hook.end(minion, event, _ctx(side))
 
 
+def _dispatch_hero_hooks(
+    boards: List[List[Minion]],
+    events: List[CombatEvent],
+    hook_name: str,
+    event: CardEvent,
+    heroes: List[Optional[HeroDef]],
+    subject_side: Optional[int] = None,
+) -> None:
+    """Fire a hero hook for the appropriate side(s).
+
+    subject_side — if set, only fires the hero on that side (e.g. on_kill
+                   fires for the killer's side; on_death for the dead
+                   minion's side).  If None, fires both heroes (e.g.
+                   on_combat_start affects every player).
+    """
+    for side, hero in enumerate(heroes):
+        if hero is None:
+            continue
+        if subject_side is not None and side != subject_side:
+            continue
+        fn = getattr(hero, hook_name, None)
+        if fn is None:
+            continue
+        ctx = CombatContext(
+            friendly_board=boards[side],
+            enemy_board=boards[1 - side],
+            events=events,
+            friendly_side=side,
+        )
+        fn(event, ctx)
+
+
 def _choose_target(defending_board: List[Minion], rng: random.Random) -> Optional[Minion]:
     taunts: List[Minion] = [m for m in defending_board if m.is_alive() and "taunt" in m.keywords]
     if taunts:
@@ -248,6 +281,7 @@ def _advance_attacker_idx(board: List[Minion], previous_idx: int, attacker_id: s
 def _resolve_deaths(
     boards: List[List[Minion]],
     events: List[CombatEvent],
+    heroes: List[Optional[HeroDef]],
     killer: Minion | None = None,
     killer_side: int | None = None,
 ) -> None:
@@ -270,20 +304,16 @@ def _resolve_deaths(
                         "player_idx": side,
                     }
                 )
-                _dispatch_hooks(
-                    boards,
-                    events,
-                    "on_death",
-                    DeathEvent(
-                        subject=corpse,
-                        subject_side=side,
-                        actor=killer,
-                        actor_side=killer_side,
-                        killer=killer,
-                        killer_side=killer_side,
-                    ),
+                death_event = DeathEvent(
                     subject=corpse,
+                    subject_side=side,
+                    actor=killer,
+                    actor_side=killer_side,
+                    killer=killer,
+                    killer_side=killer_side,
                 )
+                _dispatch_hooks(boards, events, "on_death", death_event, subject=corpse)
+                _dispatch_hero_hooks(boards, events, "on_death", death_event, heroes, subject_side=side)
                 if corpse in board:
                     board.remove(corpse)
 
@@ -297,14 +327,19 @@ def resolve_combat(
     rng: random.Random,
     tavern_tier_a: int,
     tavern_tier_b: int,
+    hero_a: Optional[HeroDef] = None,
+    hero_b: Optional[HeroDef] = None,
 ) -> CombatResult:
     boards: List[List[Minion]] = [
         [m.copy() for m in board_a],
         [m.copy() for m in board_b],
     ]
     events: List[CombatEvent] = []
+    heroes: List[Optional[HeroDef]] = [hero_a, hero_b]
 
-    _dispatch_hooks(boards, events, "on_combat_start", CombatStartEvent())
+    combat_start = CombatStartEvent()
+    _dispatch_hooks(boards, events, "on_combat_start", combat_start)
+    _dispatch_hero_hooks(boards, events, "on_combat_start", combat_start, heroes)
 
     if len(boards[0]) > len(boards[1]):
         current: int = 0
@@ -327,18 +362,12 @@ def resolve_combat(
         if defender is None:
             break
 
-        _dispatch_hooks(
-            boards,
-            events,
-            "on_target",
-            TargetEvent(
-                actor=attacker,
-                actor_side=current,
-                target=defender,
-                target_side=1 - current,
-            ),
-            subject=attacker,
+        target_event = TargetEvent(
+            actor=attacker, actor_side=current,
+            target=defender, target_side=1 - current,
         )
+        _dispatch_hooks(boards, events, "on_target", target_event, subject=attacker)
+        _dispatch_hero_hooks(boards, events, "on_target", target_event, heroes, subject_side=current)
 
         events.append(
             {
@@ -352,83 +381,50 @@ def resolve_combat(
             }
         )
 
-        _dispatch_hooks(
-            boards,
-            events,
-            "on_attack",
-            AttackEvent(
-                actor=attacker,
-                actor_side=current,
-                target=defender,
-                target_side=1 - current,
-            ),
-            subject=attacker,
+        attack_event = AttackEvent(
+            actor=attacker, actor_side=current,
+            target=defender, target_side=1 - current,
         )
+        _dispatch_hooks(boards, events, "on_attack", attack_event, subject=attacker)
+        _dispatch_hero_hooks(boards, events, "on_attack", attack_event, heroes, subject_side=current)
 
         damage_to_attacker: int = attacker.take_damage(defender.attack)
         damage_to_defender: int = defender.take_damage(attacker.attack)
 
-        _dispatch_hooks(
-            boards,
-            events,
-            "on_damage",
-            DamageEvent(
-                subject=attacker,
-                subject_side=current,
-                actor=defender,
-                actor_side=1 - current,
-                target=attacker,
-                target_side=current,
-                amount=damage_to_attacker,
-            ),
-            subject=attacker,
+        dmg_attacker = DamageEvent(
+            subject=attacker, subject_side=current,
+            actor=defender, actor_side=1 - current,
+            target=attacker, target_side=current,
+            amount=damage_to_attacker,
         )
-        _dispatch_hooks(
-            boards,
-            events,
-            "on_damage",
-            DamageEvent(
-                subject=defender,
-                subject_side=1 - current,
-                actor=attacker,
-                actor_side=current,
-                target=defender,
-                target_side=1 - current,
-                amount=damage_to_defender,
-            ),
-            subject=defender,
+        _dispatch_hooks(boards, events, "on_damage", dmg_attacker, subject=attacker)
+        _dispatch_hero_hooks(boards, events, "on_damage", dmg_attacker, heroes, subject_side=current)
+
+        dmg_defender = DamageEvent(
+            subject=defender, subject_side=1 - current,
+            actor=attacker, actor_side=current,
+            target=defender, target_side=1 - current,
+            amount=damage_to_defender,
         )
+        _dispatch_hooks(boards, events, "on_damage", dmg_defender, subject=defender)
+        _dispatch_hero_hooks(boards, events, "on_damage", dmg_defender, heroes, subject_side=1 - current)
 
         if damage_to_defender > 0 and not defender.is_alive():
-            _dispatch_hooks(
-                boards,
-                events,
-                "on_kill",
-                KillEvent(
-                    actor=attacker,
-                    actor_side=current,
-                    target=defender,
-                    target_side=1 - current,
-                    subject=defender,
-                    subject_side=1 - current,
-                ),
-                subject=attacker,
+            kill_event = KillEvent(
+                actor=attacker, actor_side=current,
+                target=defender, target_side=1 - current,
+                subject=attacker, subject_side=current,
             )
+            _dispatch_hooks(boards, events, "on_kill", kill_event, subject=attacker)
+            _dispatch_hero_hooks(boards, events, "on_kill", kill_event, heroes, subject_side=current)
         if damage_to_attacker > 0 and not attacker.is_alive():
-            _dispatch_hooks(
-                boards,
-                events,
-                "on_kill",
-                KillEvent(
-                    actor=defender,
-                    actor_side=1 - current,
-                    target=attacker,
-                    target_side=current,
-                    subject=attacker,
-                    subject_side=current,
-                ),
-                subject=defender,
+            kill_event = KillEvent(
+                actor=defender, actor_side=1 - current,
+                target=attacker, target_side=current,
+                subject=defender, subject_side=1 - current,
             )
+            _dispatch_hooks(boards, events, "on_kill", kill_event, subject=defender)
+            _dispatch_hero_hooks(boards, events, "on_kill", kill_event, heroes, subject_side=1 - current)
 
         events.append(
             {
@@ -444,7 +440,7 @@ def resolve_combat(
             }
         )
 
-        _resolve_deaths(boards, events, killer=attacker, killer_side=current)
+        _resolve_deaths(boards, events, heroes, killer=attacker, killer_side=current)
         next_attacker_idx[current] = _advance_attacker_idx(
             boards[current], attacker_idx, attacker.instance_id
         )

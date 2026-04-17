@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 import random
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from ..cards.base import CardEvent, Minion, SpawnEvent
+
+if TYPE_CHECKING:
+    from ..heroes.base import HeroDef
 
 PlayerDict = dict[str, Any]
 BuyEventData = dict[str, Any]
@@ -75,6 +80,14 @@ class BuyContext:
             if hook and hook.fn:
                 hook.fn(minion, event, self)
 
+    def trigger_hero(self, hook_name: str, event: CardEvent) -> None:
+        hero = self.player.hero
+        if hero is None:
+            return
+        fn = getattr(hero, hook_name, None)
+        if fn:
+            fn(event, self)
+
     def is_self(self, observer: Minion, subject: Minion | None) -> bool:
         return subject is not None and observer.instance_id == subject.instance_id
 
@@ -105,12 +118,18 @@ class PlayerState:
     frozen: bool = False
     locked: bool = False
     pending_discover: Optional[List[Minion]] = field(default=None)
+    hero: Optional["HeroDef"] = field(default=None, repr=False)
+    hero_power_uses_left: int = 0
 
     def start_round(self, round_num: int) -> None:
         self.max_gold = gold_for_round(round_num)
         self.gold = self.max_gold
         self.locked = False
         self.upgrade_cost = compute_upgrade_cost(self.tavern_tier, round_num)
+        self.hero_power_uses_left = (
+            1 if self.hero and self.hero.hero_power_type != "passive"
+            else 0
+        )
 
     def to_dict(self, as_self: bool = True) -> PlayerDict:
         base: PlayerDict = {
@@ -120,6 +139,7 @@ class PlayerState:
             "tavern_tier": self.tavern_tier,
             "locked": self.locked,
             "board": [m.to_dict() for m in self.board],
+            "hero": self.hero.to_dict() if self.hero else None,
         }
         if as_self:
             base.update(
@@ -130,6 +150,7 @@ class PlayerState:
                     "upgrade_cost": self.upgrade_cost,
                     "shop": [m.to_dict() if m else None for m in self.shop],
                     "frozen": self.frozen,
+                    "hero_power_uses_left": self.hero_power_uses_left,
                 }
             )
         return base
