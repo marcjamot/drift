@@ -14,6 +14,7 @@ from ..player import PlayerState
 from .phases.base import Phase
 from .phases.buy_phase import BuyPhase, DURATION as BUY_TIMER
 from .phases.combat_phase import CombatPhase
+from .pairing import PairingService
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class Match:
     Game loop:
         Hero selection (human only) → match_start broadcast
         while not game_over:
-            _compute_combat_pairs()          → random 1v1 pairings among alive players
+            _compute_combat_pairs()          → 1v1 pairings among alive players
             BuyPhase.enter()                 → bots act instantly; human gets timer
             BuyPhase.wait()                  → block until timer or human locks
             CombatPhase.enter()              → broadcast combat_start
@@ -74,6 +75,7 @@ class Match:
 
         self._buy_phase = BuyPhase()
         self._combat_phase = CombatPhase()
+        self._pairing_service = PairingService()
         self._current_phase: Optional[Phase] = None
 
         # Hero selection state
@@ -102,16 +104,11 @@ class Match:
         return [pid for pid in self.player_order if self.players[pid].health > 0]
 
     def _compute_combat_pairs(self) -> None:
-        """Randomly pair surviving players for combat this round."""
-        alive = self._alive_players()
-        shuffled = list(alive)
-        self.rng.shuffle(shuffled)
+        pairs = self._pairing_service.pair(self._alive_players(), self.rng)
         self._combat_pairs = {}
-        for i in range(0, len(shuffled) - 1, 2):
-            a, b = shuffled[i], shuffled[i + 1]
-            self._combat_pairs[a] = b
-            self._combat_pairs[b] = a
-        # If odd count, last player has no entry → gets a bye
+        for player_id, opponent_id in pairs:
+            self._combat_pairs[player_id] = opponent_id
+            self._combat_pairs[opponent_id] = player_id
 
     # ── messaging ─────────────────────────────────────────────────────────────
 
@@ -123,11 +120,14 @@ class Match:
             except Exception as exc:
                 logger.warning("Send to %s failed: %s", player_id, exc)
 
-    async def broadcast(self, msg: Message) -> None:
+    async def _broadcast(self, msg: Message) -> None:
         for pid in self._human_players():
             await self.send_to(pid, msg)
 
     async def send_state(self, player_id: str) -> None:
+        await self._send_state(player_id)
+
+    async def _send_state(self, player_id: str) -> None:
         player = self.players[player_id]
         if player.is_bot:
             return
@@ -170,12 +170,77 @@ class Match:
             },
         )
 
-    async def broadcast_state(self) -> None:
+    async def _broadcast_state(self) -> None:
         for pid in self._human_players():
-            await self.send_state(pid)
+            await self._send_state(pid)
 
-    async def notify_eliminations(self) -> None:
-        """Send game_over to any human players who just died (not yet notified)."""
+    async def _send_hero_options(self, player_id: str) -> None:
+        await self.send_to(player_id, {
+            "type": "hero_options",
+            "options": [h.to_dict() for h in self._hero_options[player_id]],
+        })
+
+    async def _broadcast_match_start(self) -> None:
+        await self._broadcast({
+            "type": "match_start",
+            "match_id": self.match_id,
+        })
+
+    async def _broadcast_combat_start(self) -> None:
+        await self._broadcast({"type": "combat_start", "round": self.round})
+
+    async def _send_combat_log(
+        self,
+        player_id: str,
+        player_a: str,
+        player_b: str,
+        initial_a: list[dict[str, Any]],
+        initial_b: list[dict[str, Any]],
+        result: dict[str, Any],
+    ) -> None:
+        await self.send_to(player_id, {
+            "type": "combat_log",
+            "round": self.round,
+            "players": [player_a, player_b],
+            "initial_a": initial_a,
+            "initial_b": initial_b,
+            "events": result["events"],
+            "surviving_a": result["surviving_a"],
+            "surviving_b": result["surviving_b"],
+        })
+
+    async def _send_combat_result(
+        self,
+        player_id: str,
+        combat_result_payload: dict[str, Any],
+    ) -> None:
+        await self.send_to(player_id, {
+            "type": "combat_result",
+            "round": self.round,
+            **combat_result_payload,
+        })
+
+    async def _send_discover(self, player_id: str) -> None:
+        player = self.players[player_id]
+        await self.send_to(player_id, {
+            "type": "discover",
+            "options": [m.to_dict() for m in player.pending_discover],
+        })
+
+    async def _send_game_over(
+        self,
+        player_id: str,
+        placement: int,
+        mmr_delta: int,
+    ) -> None:
+        await self.send_to(player_id, {
+            "type": "game_over",
+            "winner": self.winner,
+            "placement": placement,
+            "mmr_delta": mmr_delta,
+        })
+
+    async def _notify_eliminations(self) -> None:
         for pid in self._human_players():
             if pid in self._notified_dead:
                 continue
@@ -184,12 +249,18 @@ class Match:
                 mmr_delta = _MMR_DELTAS.get(player.placement, -25)
                 player.mmr += mmr_delta
                 self._notified_dead.add(pid)
-                await self.send_to(pid, {
-                    "type": "game_over",
-                    "winner": self.winner,
-                    "placement": player.placement,
-                    "mmr_delta": mmr_delta,
-                })
+                await self._send_game_over(pid, player.placement, mmr_delta)
+
+    async def _notify_surviving_humans_game_over(self) -> None:
+        for pid in self._human_players():
+            if pid in self._notified_dead:
+                continue
+            player = self.players[pid]
+            placement = player.placement or 1
+            mmr_delta = _MMR_DELTAS.get(placement, 25)
+            player.mmr += mmr_delta
+            self._notified_dead.add(pid)
+            await self._send_game_over(pid, placement, mmr_delta)
 
     # ── game loop ─────────────────────────────────────────────────────────────
 
@@ -200,10 +271,7 @@ class Match:
         self._hero_selection_done.clear()
 
         for pid in self._hero_picks_remaining:
-            await self.send_to(pid, {
-                "type": "hero_options",
-                "options": [h.to_dict() for h in self._hero_options[pid]],
-            })
+            await self._send_hero_options(pid)
 
         if self._hero_picks_remaining:
             try:
@@ -215,12 +283,7 @@ class Match:
                     self.players[pid].hero = self._hero_options[pid][0]
                 self._hero_picks_remaining.clear()
 
-        # ── notify human(s) the match is starting ─────────────────────────────
-        for pid in self._human_players():
-            await self.send_to(pid, {
-                "type": "match_start",
-                "match_id": self.match_id,
-            })
+        await self._broadcast_match_start()
 
         # ── initial shops ─────────────────────────────────────────────────────
         from .actions import refresh_shop
@@ -244,20 +307,7 @@ class Match:
 
         self._current_phase = None
 
-        # ── final notifications to surviving humans ────────────────────────────
-        for pid in self._human_players():
-            if pid not in self._notified_dead:
-                player = self.players[pid]
-                placement = player.placement or 1
-                mmr_delta = _MMR_DELTAS.get(placement, 25)
-                player.mmr += mmr_delta
-                self._notified_dead.add(pid)
-                await self.send_to(pid, {
-                    "type": "game_over",
-                    "winner": self.winner,
-                    "placement": placement,
-                    "mmr_delta": mmr_delta,
-                })
+        await self._notify_surviving_humans_game_over()
 
     # ── action dispatch ───────────────────────────────────────────────────────
 
@@ -278,13 +328,10 @@ class Match:
 
             if result.get("ok"):
                 for pid in self._human_players():
-                    await self.send_state(pid)
+                    await self._send_state(pid)
                 player = self.players.get(player_id)
                 if player and player.pending_discover:
-                    await self.send_to(player_id, {
-                        "type": "discover",
-                        "options": [m.to_dict() for m in player.pending_discover],
-                    })
+                    await self._send_discover(player_id)
 
             return result
 
