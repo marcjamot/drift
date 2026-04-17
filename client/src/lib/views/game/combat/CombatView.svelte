@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import { gs } from "$lib/game/store.svelte.js";
+	import { combat } from "$lib/game/combat.svelte.js";
+	import { connection } from "$lib/game/connection.svelte.js";
+	import { match } from "$lib/game/match.svelte.js";
 	import type { CombatEvent, MinionSnapshot } from "$lib/game/types.js";
 	import EnemyInfo from "./EnemyInfo.svelte";
 	import EnemyBoard from "./EnemyBoard.svelte";
@@ -36,12 +38,12 @@
 	const dmgTimeouts: Record<string, number> = {};
 
 	$effect(() => {
-		const log = gs.combatLog;
-		const meta = gs.combatMeta;
-		if (!meta || !gs.playerId) return;
+		const log = combat.combatLog;
+		const meta = combat.combatMeta;
+		if (!meta || !connection.playerId) return;
 		if (animStarted) return;
 		animStarted = true;
-		const isSelfA = meta.players[0] === gs.playerId;
+		const isSelfA = meta.players[0] === connection.playerId;
 		untrack(() => {
 			animSelfBoard = isSelfA ? [...meta.initial_a] : [...meta.initial_b];
 			animOppBoard = isSelfA ? [...meta.initial_b] : [...meta.initial_a];
@@ -53,10 +55,10 @@
 	// After animation finishes and we're back in buy phase, hold the result
 	// briefly then clear combat data so GameView unmounts this view.
 	$effect(() => {
-		if (gs.phase !== "buy") return;
+		if (match.phase !== "buy") return;
 		if (animPhase === "idle") return;
 		if (animPhase === "animating") return;
-		if (!gs.combatResult) return;
+		if (!combat.combatResult) return;
 		const resetTimer = setTimeout(() => {
 			animStarted = false;
 			animPhase = "idle";
@@ -69,9 +71,9 @@
 			animCleaveSplash = new Set();
 			animCardStyles = new Map();
 			clearDamageNumbers();
-			gs.combatLog = [];
-			gs.combatMeta = null;
-			gs.combatResult = null;
+			combat.combatLog = [];
+			combat.combatMeta = null;
+			combat.combatResult = null;
 		}, COMBAT_RESULT_HOLD_MS);
 		return () => clearTimeout(resetTimer);
 	});
@@ -245,10 +247,10 @@
 		animBadges = new Map();
 		clearDamageNumbers();
 
-		const result = gs.combatResult;
+		const result = combat.combatResult;
 		if (result) {
 			if (result.winner_player === null) animText = "Tie — no damage dealt";
-			else if (result.winner_player === gs.playerId) animText = "You won this round";
+			else if (result.winner_player === connection.playerId) animText = "You won this round";
 			else animText = "You lost this round";
 		} else {
 			animText = "";
@@ -259,8 +261,8 @@
 </script>
 
 <div class="battle-arena" class:shaking={animShake} bind:this={arenaEl}>
-	{#if gs.opponent}
-		<EnemyInfo name={gs.opponent.name} health={gs.opponent.health} hero={gs.opponent.hero ?? null} />
+	{#if match.opponent}
+		<EnemyInfo name={match.opponent.name} health={match.opponent.health} hero={match.opponent.hero ?? null} />
 	{/if}
 
 	<EnemyBoard
@@ -275,18 +277,18 @@
 	/>
 
 	<div class="arena-divider">
-		{#if animPhase === "done" && gs.combatResult && gs.self}
+		{#if animPhase === "done" && combat.combatResult && match.self}
 			<div
 				class="result-pill"
-				class:win={gs.combatResult.winner_player === gs.self.player_id}
-				class:loss={gs.combatResult.winner_player !== null && gs.combatResult.winner_player !== gs.self.player_id}
+				class:win={combat.combatResult.winner_player === match.self.player_id}
+				class:loss={combat.combatResult.winner_player !== null && combat.combatResult.winner_player !== match.self.player_id}
 			>
-				{#if gs.combatResult.winner_player === null}
+				{#if combat.combatResult.winner_player === null}
 					Tie — no damage
-				{:else if gs.combatResult.winner_player === gs.self.player_id}
-					You win · opponent takes {gs.combatResult.damage}
+				{:else if combat.combatResult.winner_player === match.self.player_id}
+					You win · opponent takes {combat.combatResult.damage}
 				{:else}
-					You lose · you take {gs.combatResult.damage}
+					You lose · you take {combat.combatResult.damage}
 				{/if}
 			</div>
 		{:else}
@@ -306,8 +308,8 @@
 		{healthFlash}
 	/>
 
-	{#if gs.self}
-		<PlayerInfo name={gs.self.name} health={gs.self.health} hero={gs.self.hero ?? null} />
+	{#if match.self}
+		<PlayerInfo name={match.self.name} health={match.self.health} hero={match.self.hero ?? null} />
 	{/if}
 
 	{#each dmgNumbers as n (n.id)}

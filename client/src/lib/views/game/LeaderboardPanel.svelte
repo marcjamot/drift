@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { gs } from "$lib/game/store.svelte.js";
+	import { connection } from "$lib/game/connection.svelte.js";
+	import { match } from "$lib/game/match.svelte.js";
 	import type { LeaderboardEntry } from "$lib/game/types.js";
 
 	function ordinal(n: number): string {
@@ -10,14 +11,14 @@
 	}
 
 	function isMyOpponent(entry: LeaderboardEntry): boolean {
-		return gs.opponent?.player_id === entry.player_id;
+		return match.opponent?.player_id === entry.player_id;
 	}
 </script>
 
 <aside class="leaderboard">
 	<div class="lb-header">Players</div>
-	{#each gs.leaderboard as entry, i (entry.player_id)}
-		{@const isSelf = entry.player_id === gs.playerId}
+	{#each match.leaderboard as entry, i (entry.player_id)}
+		{@const isSelf = entry.player_id === connection.playerId}
 		{@const isOpponent = isMyOpponent(entry)}
 		{@const isDead = entry.health <= 0}
 		<div

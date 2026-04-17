@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { gs, connect } from "$lib/game/store.svelte.js";
+	import { combat } from "$lib/game/combat.svelte.js";
+	import { connect, connection } from "$lib/game/connection.svelte.js";
+	import { match } from "$lib/game/match.svelte.js";
+	import { ui } from "$lib/game/ui.svelte.js";
 	import Login from "$lib/views/Login.svelte";
 	import Lobby from "$lib/views/Lobby.svelte";
 	import HeroSelectView from "$lib/views/HeroSelectView.svelte";
@@ -10,37 +13,37 @@
 	onMount(() => connect());
 
 	function restart() {
-		gs.screen = "login";
-		gs.gameOverWinner = null;
-		gs.self = null;
-		gs.opponent = null;
-		gs.round = 0;
-		gs.phase = null;
-		gs.buySecondsLeft = null;
-		gs.combatLog = [];
-		gs.combatMeta = null;
-		gs.combatResult = null;
-		gs.matchId = null;
+		ui.screen = "login";
+		ui.gameOverWinner = null;
+		match.self = null;
+		match.opponent = null;
+		match.round = 0;
+		match.phase = null;
+		match.buySecondsLeft = null;
+		combat.combatLog = [];
+		combat.combatMeta = null;
+		combat.combatResult = null;
+		connection.matchId = null;
 	}
 </script>
 
-{#if !gs.connected}
+{#if !connection.connected}
 	<div class="overlay">Connecting…</div>
 {/if}
 
-{#if gs.error}
-	<div class="toast">{gs.error}</div>
+{#if ui.error}
+	<div class="toast">{ui.error}</div>
 {/if}
 
-{#if gs.screen === "login"}
+{#if ui.screen === "login"}
 	<Login />
-{:else if gs.screen === "queued"}
+{:else if ui.screen === "queued"}
 	<Lobby />
-{:else if gs.screen === "hero_select"}
+{:else if ui.screen === "hero_select"}
 	<HeroSelectView />
-{:else if gs.screen === "game"}
+{:else if ui.screen === "game"}
 	<GameView />
-{:else if gs.screen === "game_over"}
+{:else if ui.screen === "game_over"}
 	<GameOver onrestart={restart} />
 {/if}
 

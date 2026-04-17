@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { gs } from "$lib/game/store.svelte.js";
+	import { connection } from "$lib/game/connection.svelte.js";
+	import { ui } from "$lib/game/ui.svelte.js";
 
 	interface Props {
 		onrestart: () => void;
@@ -13,15 +14,15 @@
 		return `${n}th`;
 	}
 
-	const placement = $derived(gs.gameOverPlacement);
-	const mmrDelta = $derived(gs.gameOverMmrDelta);
+	const placement = $derived(ui.gameOverPlacement);
+	const mmrDelta = $derived(ui.gameOverMmrDelta);
 </script>
 
 <div class="game-over">
 	<div class="go-content">
 		{#if placement === 1}
 			<div class="go-result win">Victory</div>
-			<div class="go-sub">1st place — well played, {gs.playerName}.</div>
+			<div class="go-sub">1st place — well played, {connection.playerName}.</div>
 		{:else if placement !== null && placement <= 4}
 			<div class="go-result win">{ordinal(placement)} Place</div>
 			<div class="go-sub">Top 4 finish!</div>

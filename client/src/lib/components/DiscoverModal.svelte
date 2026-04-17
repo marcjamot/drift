@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { send } from "$lib/game/store.svelte.js";
+	import { send } from "$lib/game/connection.svelte.js";
 	import type { MinionSnapshot } from "$lib/game/types.js";
 	import MinionCard from "./MinionCard.svelte";
 
