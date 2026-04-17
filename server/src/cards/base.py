@@ -9,6 +9,29 @@ CardDict = dict[str, Any]
 CardContext = Any
 
 
+class Tribe:
+    BEAST = "beast"
+    MECH = "mech"
+    DEMON = "demon"
+    MURLOC = "murloc"
+    PIRATE = "pirate"
+    DRAGON = "dragon"
+    UNDEAD = "undead"
+    NEUTRAL = "neutral"
+
+
+TRIBES = {
+    Tribe.BEAST,
+    Tribe.MECH,
+    Tribe.DEMON,
+    Tribe.MURLOC,
+    Tribe.PIRATE,
+    Tribe.DRAGON,
+    Tribe.UNDEAD,
+    Tribe.NEUTRAL,
+}
+
+
 @dataclass(slots=True)
 class CardEvent:
     pass
@@ -163,6 +186,7 @@ class Minion:
     health: int
     max_health: int
     tier: int
+    tribe: str = Tribe.NEUTRAL
     instance_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     keywords: Set[str] = field(default_factory=set)
     divine_shield: bool = False
@@ -189,6 +213,7 @@ class Minion:
             "health": self.health,
             "max_health": self.max_health,
             "tier": self.tier,
+            "tribe": self.tribe,
             "keywords": list(self.keywords),
             "divine_shield": self.divine_shield,
             "golden": self.golden,
@@ -205,6 +230,7 @@ class CardDef:
     base_attack: int
     base_health: int
     tier: int
+    tribe: str = field(init=False, default=Tribe.NEUTRAL)
     cost: int = 3
     keywords: list[str] = field(default_factory=list)
     description: str = ""
@@ -242,6 +268,7 @@ class CardDef:
             health=self.base_health,
             max_health=self.base_health,
             tier=self.tier,
+            tribe=self.tribe,
             keywords=set(self.keywords),
             divine_shield="divine_shield" in self.keywords,
         )
@@ -261,6 +288,7 @@ class CardDef:
             "base_attack": self.base_attack,
             "base_health": self.base_health,
             "tier": self.tier,
+            "tribe": self.tribe,
             "cost": self.cost,
             "keywords": self.keywords,
             "description": self.description,

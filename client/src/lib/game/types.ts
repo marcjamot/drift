@@ -20,6 +20,7 @@ export interface MinionSnapshot {
 	health: number;
 	max_health: number;
 	tier: number;
+	tribe: string;
 	keywords: string[];
 	divine_shield: boolean;
 	golden: boolean;

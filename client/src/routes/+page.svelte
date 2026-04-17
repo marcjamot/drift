@@ -21,7 +21,6 @@
 		gs.combatMeta = null;
 		gs.combatResult = null;
 		gs.matchId = null;
-		gs.opponentName = null;
 	}
 </script>
 
