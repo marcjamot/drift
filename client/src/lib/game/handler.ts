@@ -1,12 +1,13 @@
 import { combat } from "./combat.svelte.js";
 import { connection } from "./connection.svelte.js";
 import { match } from "./match.svelte.js";
-import type { CombatEvent, CombatResultMsg, HeroSnapshot, LeaderboardEntry, MinionSnapshot, OpponentSnapshot, Phase, SelfSnapshot } from "./types.js";
+import type { CombatEvent, CombatResultMsg, HeroSnapshot, LeaderboardEntry, MinionSnapshot, OpponentSnapshot, Phase, QueuedMsg, SelfSnapshot } from "./types.js";
 import { ui } from "./ui.svelte.js";
 
 let frozenRound = -1;
 let frozenOpponent: OpponentSnapshot | null = null;
 let buyTimerHandle: number | null = null;
+let queueTimerHandle: number | null = null;
 
 function stopBuyTimer() {
 	if (buyTimerHandle !== null) {
@@ -27,6 +28,25 @@ function startBuyTimer() {
 	}, 1000);
 }
 
+function stopQueueTimer() {
+	if (queueTimerHandle !== null) {
+		clearInterval(queueTimerHandle);
+		queueTimerHandle = null;
+	}
+}
+
+function startQueueTimer() {
+	stopQueueTimer();
+	if (ui.queueSecondsLeft === null) return;
+	queueTimerHandle = window.setInterval(() => {
+		if (ui.screen !== "queued" || ui.queueSecondsLeft === null) {
+			stopQueueTimer();
+			return;
+		}
+		ui.queueSecondsLeft = Math.max(0, ui.queueSecondsLeft - 1);
+	}, 1000);
+}
+
 function showError(message: string, ms: number) {
 	ui.error = message;
 	setTimeout(() => (ui.error = null), ms);
@@ -39,7 +59,12 @@ function resetCombat() {
 }
 
 function resetMatchStart() {
+	stopQueueTimer();
 	ui.heroOptions = null;
+	ui.queuedCount = 0;
+	ui.totalSlots = 8;
+	ui.queueSecondsLeft = null;
+	ui.canSkipQueueWait = false;
 	ui.gameOverWinner = null;
 	ui.gameOverPlacement = null;
 	ui.gameOverMmrDelta = null;
@@ -59,12 +84,21 @@ export function handleMessage(msg: Record<string, unknown>) {
 			return;
 		case "reconnected":
 			connection.playerId = msg.player_id as string;
+			stopQueueTimer();
 			ui.screen = "game";
 			return;
-		case "queued":
+		case "queued": {
+			const queued = msg as unknown as QueuedMsg;
+			ui.queuedCount = queued.queued_count;
+			ui.totalSlots = queued.total_slots;
+			ui.queueSecondsLeft = queued.seconds_left;
+			ui.canSkipQueueWait = queued.can_skip_wait;
 			ui.screen = "queued";
+			startQueueTimer();
 			return;
+		}
 		case "hero_options":
+			stopQueueTimer();
 			ui.heroOptions = msg.options as HeroSnapshot[];
 			ui.screen = "hero_select";
 			return;

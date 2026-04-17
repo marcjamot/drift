@@ -79,12 +79,15 @@ async def handler(ws: Any) -> None:
                     await _send(ws, {"type": "error", "message": "login first"})
                     continue
                 name: str = str(_registry[player_id]["name"])
-                await _send(ws, {"type": "queued"})
+                await matchmaker.queue(player_id, name, make_sender())
 
-                match = await matchmaker.queue(player_id, name, make_sender())
-
-                if match:
-                    asyncio.create_task(match.run())
+            elif kind == "queue_now":
+                if not player_id:
+                    await _send(ws, {"type": "error", "message": "login first"})
+                    continue
+                match = await matchmaker.skip_wait(player_id)
+                if not match:
+                    await _send(ws, {"type": "error", "message": "cannot skip wait now"})
 
             else:
                 if not player_id:
@@ -105,7 +108,7 @@ async def handler(ws: Any) -> None:
         logger.info("Connection closed: %s", player_id)
     finally:
         if player_id:
-            matchmaker.dequeue(player_id)
+            await matchmaker.dequeue(player_id)
 
 
 async def main() -> None:
