@@ -8,6 +8,8 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from ..cards.catalog import SHOP_CARDS
 from ..cards.pool import CardPool
+from ..heroes.base import HeroDef
+from ..heroes.catalog import HERO_POOL
 from ..player import PlayerState
 from .phases.base import Phase
 from .phases.buy_phase import BuyPhase, DURATION as BUY_TIMER
@@ -19,12 +21,16 @@ Message = dict[str, Any]
 ActionResult = dict[str, Any]
 Sender = Callable[[str], Awaitable[None]]
 
+HERO_SELECTION_TIMEOUT = 30.0  # seconds players have to pick a hero
+HERO_OPTIONS_COUNT = 3         # choices offered to each player
+
 
 class Match:
     """
     Orchestrates a single 2-player match.
 
     Game loop:
+        Hero selection → match_start broadcast
         while not game_over:
             BuyPhase.enter()   → set state, refresh shops, start buy timer
             BuyPhase.wait()    → block until timer expires or both players lock
@@ -66,6 +72,11 @@ class Match:
         self._buy_phase = BuyPhase()
         self._combat_phase = CombatPhase()
         self._current_phase: Optional[Phase] = None
+
+        # Hero selection state
+        self._hero_options: Dict[str, List[HeroDef]] = {}
+        self._hero_selection_done: asyncio.Event = asyncio.Event()
+        self._hero_picks_remaining: set = set()
 
     # ── sender registry ───────────────────────────────────────────────────────
 
@@ -121,6 +132,37 @@ class Match:
     # ── game loop ─────────────────────────────────────────────────────────────
 
     async def run(self) -> None:
+        # ── hero selection ────────────────────────────────────────────────────
+        self._hero_options = self._deal_hero_options()
+        self._hero_picks_remaining = set(self.player_order)
+        self._hero_selection_done.clear()
+
+        for pid in self.player_order:
+            await self.send_to(pid, {
+                "type": "hero_options",
+                "options": [h.to_dict() for h in self._hero_options[pid]],
+            })
+
+        try:
+            await asyncio.wait_for(
+                self._hero_selection_done.wait(), timeout=HERO_SELECTION_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            # Auto-pick first option for anyone who didn't choose in time
+            for pid in list(self._hero_picks_remaining):
+                self.players[pid].hero = self._hero_options[pid][0]
+            self._hero_picks_remaining.clear()
+
+        # ── notify both players the match is starting ─────────────────────────
+        for pid in self.player_order:
+            opp_id = self._opponent(pid)
+            await self.send_to(pid, {
+                "type": "match_start",
+                "match_id": self.match_id,
+                "opponent": self.players[opp_id].name,
+            })
+
+        # ── game loop ─────────────────────────────────────────────────────────
         for player in self.players.values():
             self._buy_phase._refresh_shop(player, self)
 
@@ -148,6 +190,9 @@ class Match:
             if kind == "concede":
                 return self._act_concede(player_id)
 
+            if kind == "hero_pick":
+                return self._act_hero_pick(player_id, action)
+
             if self._current_phase is None:
                 return {"error": "match not started"}
 
@@ -171,6 +216,30 @@ class Match:
         self.winner = self._opponent(player_id)
         self.phase = "game_over"
         self._phase_end.set()
+        return {"ok": True}
+
+    # ── hero selection helpers ────────────────────────────────────────────────
+
+    def _deal_hero_options(self) -> Dict[str, List[HeroDef]]:
+        """Sample distinct heroes for each player — no shared options."""
+        needed = len(self.player_order) * HERO_OPTIONS_COUNT
+        pool = self.rng.sample(HERO_POOL, min(needed, len(HERO_POOL)))
+        options: Dict[str, List[HeroDef]] = {}
+        for i, pid in enumerate(self.player_order):
+            options[pid] = pool[i * HERO_OPTIONS_COUNT:(i + 1) * HERO_OPTIONS_COUNT]
+        return options
+
+    def _act_hero_pick(self, player_id: str, action: Message) -> ActionResult:
+        if player_id not in self._hero_picks_remaining:
+            return {"error": "hero already chosen"}
+        options = self._hero_options.get(player_id, [])
+        idx = action.get("index")
+        if idx is None or not (0 <= idx < len(options)):
+            return {"error": "invalid hero index"}
+        self.players[player_id].hero = options[idx]
+        self._hero_picks_remaining.discard(player_id)
+        if not self._hero_picks_remaining:
+            self._hero_selection_done.set()
         return {"ok": True}
 
     # ── helpers ───────────────────────────────────────────────────────────────

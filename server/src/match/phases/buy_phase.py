@@ -57,10 +57,10 @@ class BuyPhase(Phase):
                 player.frozen = False
             else:
                 self._refresh_shop(player, match)
-            BuyContext(player=player, rng=match.rng).trigger(
-                "on_round_start",
-                RoundStartEvent(round=match.round, owner=player),
-            )
+            ctx = BuyContext(player=player, rng=match.rng)
+            event = RoundStartEvent(round=match.round, owner=player)
+            ctx.trigger("on_round_start", event)
+            ctx.trigger_hero("on_round_start", event)
 
         await match.broadcast_state()
 
@@ -100,6 +100,8 @@ class BuyPhase(Phase):
             return self._act_lock(player, match)
         if kind == "discover_pick":
             return self._act_discover_pick(player, action, match)
+        if kind == "use_hero_power":
+            return self._act_use_hero_power(player, action, match)
         return {"error": f"unknown action: {kind!r}"}
 
     # ── shop helper ───────────────────────────────────────────────────────────
@@ -125,9 +127,10 @@ class BuyPhase(Phase):
         player.shop[idx] = None
         player.hand.append(minion)
 
-        BuyContext(player=player, rng=match.rng).trigger(
-            "on_buy", BuyEvent(subject=minion, owner=player, shop_index=idx)
-        )
+        ctx = BuyContext(player=player, rng=match.rng)
+        event = BuyEvent(subject=minion, owner=player, shop_index=idx)
+        ctx.trigger("on_buy", event)
+        ctx.trigger_hero("on_buy", event)
         self._check_triple(player, match)
         return {"ok": True}
 
@@ -142,8 +145,12 @@ class BuyPhase(Phase):
         player.board.append(minion)
 
         ctx = BuyContext(player=player, rng=match.rng)
-        ctx.trigger("on_play", PlayEvent(subject=minion, owner=player, hand_index=idx, source="hand"))
-        ctx.trigger("on_spawn", SpawnEvent(subject=minion, source="play", owner=player))
+        play_event = PlayEvent(subject=minion, owner=player, hand_index=idx, source="hand")
+        spawn_event = SpawnEvent(subject=minion, source="play", owner=player)
+        ctx.trigger("on_play", play_event)
+        ctx.trigger_hero("on_play", play_event)
+        ctx.trigger("on_spawn", spawn_event)
+        ctx.trigger_hero("on_spawn", spawn_event)
         self._check_triple(player, match)
         return {"ok": True}
 
@@ -153,9 +160,10 @@ class BuyPhase(Phase):
             return {"error": "invalid board_index"}
 
         minion = player.board[idx]
-        BuyContext(player=player, rng=match.rng).trigger(
-            "on_sell", SellEvent(subject=minion, owner=player, board_index=idx)
-        )
+        ctx = BuyContext(player=player, rng=match.rng)
+        sell_event = SellEvent(subject=minion, owner=player, board_index=idx)
+        ctx.trigger("on_sell", sell_event)
+        ctx.trigger_hero("on_sell", sell_event)
         player.board.pop(idx)
         player.gold = min(player.gold + SELL_VALUE, player.max_gold)
         match.pool.return_cards([minion])
@@ -215,6 +223,43 @@ class BuyPhase(Phase):
         player.pending_discover = None
         player.hand.append(chosen)
         self._check_triple(player, match)
+        return {"ok": True}
+
+    def _act_use_hero_power(self, player: PlayerState, action: Message, match: Match) -> ActionResult:
+        from ...heroes.base import HeroPowerEvent
+        hero = player.hero
+        if not hero or hero.hero_power_type == "passive" or not hero.hero_power:
+            return {"error": "no active hero power"}
+        if player.hero_power_uses_left <= 0:
+            return {"error": "hero power already used this round"}
+
+        target = None
+        target_zone = ""
+        target_index = -1
+
+        if hero.hero_power_type.startswith("active_target_"):
+            zone = action.get("target_zone")
+            idx = action.get("target_index")
+            if zone is None or idx is None:
+                return {"error": "target_zone and target_index required"}
+            expected = hero.hero_power_type.removeprefix("active_target_")
+            if zone != expected:
+                return {"error": f"must target a card in {expected}"}
+            idx = int(idx)
+            if zone == "shop":
+                if not (0 <= idx < len(player.shop)) or player.shop[idx] is None:
+                    return {"error": "invalid shop target"}
+                target = player.shop[idx]
+            elif zone == "hand":
+                if not (0 <= idx < len(player.hand)):
+                    return {"error": "invalid hand target"}
+                target = player.hand[idx]
+            target_zone = zone
+            target_index = idx
+
+        player.hero_power_uses_left -= 1
+        ctx = BuyContext(player=player, rng=match.rng)
+        hero.hero_power(HeroPowerEvent(owner=player, target=target, target_zone=target_zone, target_index=target_index), ctx)
         return {"ok": True}
 
     # ── triple / discover helpers ─────────────────────────────────────────────

@@ -16,6 +16,7 @@
 	const BOARD_LIMIT = 7;
 
 	let activeDropZone = $state<"shop" | "board" | "hand" | null>(null);
+	let heroTargeting = $state<"shop" | "hand" | null>(null);
 	let boardDropTargetIndex = $state<number | null>(null);
 	let dragSource = $state<{
 		origin: "shop" | "board" | "hand";
@@ -235,6 +236,49 @@
 
 {#if gs.self}
 	<div class="buy-layout" class:flash={healthFlash}>
+		<!-- Hero info panel -->
+		{#if gs.self.hero}
+			{@const hero = gs.self.hero}
+			{@const usesLeft = gs.self.hero_power_uses_left}
+			{@const isActive = hero.power_type !== "passive"}
+			{@const canActivate = isActive && usesLeft > 0 && heroTargeting === null}
+			<div class="hero-info-bar">
+				<div class="hero-info-text">
+					<span class="hero-info-name">⚔ {hero.name}</span>
+					<span class="hero-info-sep">·</span>
+					<span class="hero-info-desc">{hero.description}</span>
+				</div>
+				{#if isActive}
+					{#if heroTargeting !== null}
+						<button
+							class="hero-power-btn targeting"
+							onclick={() => (heroTargeting = null)}
+						>
+							<span class="power-label">Cancel (targeting {heroTargeting})</span>
+						</button>
+					{:else}
+						<button
+							class="hero-power-btn"
+							class:ready={canActivate}
+							class:spent={usesLeft === 0}
+							disabled={!canActivate}
+							onclick={() => {
+								if (hero.power_type === "active_click") {
+									send({ type: "use_hero_power" });
+								} else if (hero.power_type === "active_target_shop") {
+									heroTargeting = "shop";
+								} else if (hero.power_type === "active_target_hand") {
+									heroTargeting = "hand";
+								}
+							}}
+						>
+							<span class="power-label">{hero.description}</span>
+						</button>
+					{/if}
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Shop panel: cards available to purchase -->
 		<section
 			class="panel shop-panel drop-zone"
@@ -253,6 +297,11 @@
 				ghostSourceShopIndex={dragSource?.origin === "shop" ? dragSource.index : null}
 				oncarddragstart={dragShopCard}
 				oncarddragend={dragEnded}
+				targeting={heroTargeting === "shop"}
+				ontargetselect={(i) => {
+					send({ type: "use_hero_power", target_zone: "shop", target_index: i });
+					heroTargeting = null;
+				}}
 			/>
 		</section>
 
@@ -299,6 +348,11 @@
 				{ghostSourceIds}
 				oncarddragstart={dragHandCard}
 				oncarddragend={dragEnded}
+				targeting={heroTargeting === "hand"}
+				ontargetselect={(i) => {
+					send({ type: "use_hero_power", target_zone: "hand", target_index: i });
+					heroTargeting = null;
+				}}
 			/>
 		</section>
 	</div>
@@ -381,6 +435,89 @@
 		50% {
 			box-shadow: inset 0 0 0 1px #71c186aa, 0 0 28px 6px #71c18644;
 		}
+	}
+
+	.hero-info-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		padding: 10px 16px;
+		border-radius: 14px;
+		background: rgba(14, 20, 32, 0.72);
+		border: 1px solid #2a3a50;
+		backdrop-filter: blur(6px);
+		flex-shrink: 0;
+		flex-wrap: wrap;
+	}
+	.hero-info-text {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		min-width: 0;
+	}
+	.hero-info-name {
+		font-size: 13px;
+		font-weight: 700;
+		color: #a8d4ff;
+		white-space: nowrap;
+	}
+	.hero-info-sep {
+		color: #3a4a5a;
+	}
+	.hero-info-desc {
+		font-size: 12px;
+		color: #8a9aaa;
+		line-height: 1.5;
+	}
+
+	.hero-power-btn {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 7px 14px;
+		border-radius: 999px;
+		border: 1px solid #3a4a5a;
+		background: #111820;
+		color: #6a8aaa;
+		font-family: inherit;
+		font-size: 12px;
+		cursor: default;
+		white-space: nowrap;
+		flex-shrink: 0;
+		transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
+	}
+	.hero-power-btn.ready {
+		border-color: #5a8abf;
+		background: #131e2e;
+		color: #c8e0ff;
+		cursor: pointer;
+	}
+	.hero-power-btn.ready:hover {
+		border-color: #7aaae0;
+		background: #1a2a40;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 16px #3a6ab022;
+	}
+	.hero-power-btn.ready:active {
+		transform: translateY(0);
+	}
+	.hero-power-btn.spent {
+		opacity: 0.35;
+	}
+	.hero-power-btn.targeting {
+		border-color: #7ab0e0;
+		background: #0e1a2e;
+		color: #a8d4ff;
+		cursor: pointer;
+	}
+	.hero-power-btn.targeting:hover {
+		border-color: #ff7070;
+		color: #ffaaaa;
+	}
+	.power-label {
+		font-size: 12px;
 	}
 
 	@media (max-width: 900px) {

@@ -1,26 +1,38 @@
 <script lang="ts">
+	import type { HeroSnapshot } from "$lib/game/types.js";
+
 	interface Props {
 		name: string;
 		health: number;
+		hero: HeroSnapshot | null;
 	}
-	let { name, health }: Props = $props();
+	let { name, health, hero }: Props = $props();
 </script>
 
-<div class="arena-nameplate opp-plate">
-	<span class="arena-kicker">Enemy</span>
-	<span class="arena-name">{name}</span>
-	<span class="arena-hp" class:low={health <= 15}>♥ {health}</span>
+<div class="opp-plate">
+	<div class="arena-nameplate">
+		<span class="arena-kicker">Enemy</span>
+		<span class="arena-name">{name}</span>
+		<span class="arena-hp" class:low={health <= 15}>♥ {health}</span>
+	</div>
+	{#if hero}
+		<div class="hero-row">
+			<span class="hero-name">⚔ {hero.name}</span>
+			<span class="hero-sep">·</span>
+			<span class="hero-desc">{hero.description}</span>
+		</div>
+	{/if}
 </div>
 
 <style>
+	.opp-plate {
+		border-bottom: 1px solid #2a2218;
+	}
 	.arena-nameplate {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 10px 20px;
-	}
-	.opp-plate {
-		border-bottom: 1px solid #2a2218;
+		padding: 10px 20px 6px;
 	}
 	.arena-kicker {
 		font-size: 10px;
@@ -40,5 +52,27 @@
 	}
 	.arena-hp.low {
 		color: #c46060;
+	}
+	.hero-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 0 20px 10px;
+		flex-wrap: wrap;
+	}
+	.hero-name {
+		font-size: 11px;
+		font-weight: 700;
+		color: #c8a870;
+		white-space: nowrap;
+	}
+	.hero-sep {
+		font-size: 11px;
+		color: #3a3228;
+	}
+	.hero-desc {
+		font-size: 11px;
+		color: #6a5e4e;
+		line-height: 1.4;
 	}
 </style>

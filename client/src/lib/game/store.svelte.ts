@@ -1,7 +1,7 @@
-import type { CombatEvent, CombatMeta, CombatResultMsg, Intent, OpponentSnapshot, Phase, SelfSnapshot } from "./types.js";
+import type { CombatEvent, CombatMeta, CombatResultMsg, HeroSnapshot, Intent, OpponentSnapshot, Phase, SelfSnapshot } from "./types.js";
 
 export const gs = $state({
-	screen: "login" as "login" | "queued" | "game" | "game_over",
+	screen: "login" as "login" | "queued" | "hero_select" | "game" | "game_over",
 
 	playerId: null as string | null,
 	playerName: null as string | null,
@@ -20,6 +20,7 @@ export const gs = $state({
 	gameOverWinner: null as string | null,
 	connected: false,
 	discoverOptions: null as import("./types.js").MinionSnapshot[] | null,
+	heroOptions: null as HeroSnapshot[] | null,
 });
 
 let _frozenRound = -1;
@@ -100,10 +101,16 @@ function handle(msg: Record<string, unknown>) {
 			gs.screen = "queued";
 			return;
 
+		case "hero_options":
+			gs.heroOptions = msg.options as HeroSnapshot[];
+			gs.screen = "hero_select";
+			return;
+
 		case "match_start":
 			gs.matchId = msg.match_id as string;
 			gs.opponentName = msg.opponent as string;
 			gs.screen = "game";
+			gs.heroOptions = null;
 			gs.buySecondsLeft = null;
 			gs.combatLog = [];
 			gs.combatMeta = null;
@@ -182,6 +189,9 @@ function handle(msg: Record<string, unknown>) {
 		case "action_result":
 			if ((msg.action as string) === "discover_pick" && !msg.error) {
 				gs.discoverOptions = null;
+			}
+			if ((msg.action as string) === "hero_pick" && !msg.error) {
+				// heroOptions cleared on match_start; just show waiting state
 			}
 			if (msg.error) {
 				gs.error = msg.error as string;

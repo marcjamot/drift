@@ -1,3 +1,16 @@
+export type HeroPowerType =
+	| "passive"
+	| "active_click"
+	| "active_target_shop"
+	| "active_target_hand";
+
+export interface HeroSnapshot {
+	id: string;
+	name: string;
+	description: string;
+	power_type: HeroPowerType;
+}
+
 export interface MinionSnapshot {
 	instance_id: string;
 	card_id: string;
@@ -25,6 +38,8 @@ export interface SelfSnapshot {
 	gold: number;
 	max_gold: number;
 	frozen: boolean;
+	hero: HeroSnapshot | null;
+	hero_power_uses_left: number;  // 1 = available, 0 = spent
 }
 
 export interface OpponentSnapshot {
@@ -34,6 +49,7 @@ export interface OpponentSnapshot {
 	tavern_tier: number;
 	locked: boolean;
 	board: MinionSnapshot[];
+	hero: HeroSnapshot | null;
 }
 
 export type Phase = "buy" | "combat" | "game_over";
@@ -61,6 +77,9 @@ export type Intent =
 	| { type: "login"; name: string }
 	| { type: "reconnect"; player_id: string }
 	| { type: "queue" }
+	| { type: "hero_pick"; index: number }
+	| { type: "use_hero_power" }
+	| { type: "use_hero_power"; target_zone: "shop" | "hand"; target_index: number }
 	| { type: "buy"; shop_index: number }
 	| { type: "play"; hand_index: number }
 	| { type: "sell"; board_index: number }

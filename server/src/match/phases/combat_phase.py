@@ -55,6 +55,8 @@ class CombatPhase(Phase):
             rng=match.rng,
             tavern_tier_a=p0.tavern_tier,
             tavern_tier_b=p1.tavern_tier,
+            hero_a=p0.hero,
+            hero_b=p1.hero,
         )
 
         # 2. Broadcast full event log so the client can replay the fight

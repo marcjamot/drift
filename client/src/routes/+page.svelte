@@ -3,6 +3,7 @@
 	import { gs, connect } from "$lib/game/store.svelte.js";
 	import Login from "$lib/views/Login.svelte";
 	import Lobby from "$lib/views/Lobby.svelte";
+	import HeroSelectView from "$lib/views/HeroSelectView.svelte";
 	import GameView from "$lib/views/game/GameView.svelte";
 	import GameOver from "$lib/views/GameOver.svelte";
 
@@ -36,6 +37,8 @@
 	<Login />
 {:else if gs.screen === "queued"}
 	<Lobby />
+{:else if gs.screen === "hero_select"}
+	<HeroSelectView />
 {:else if gs.screen === "game"}
 	<GameView />
 {:else if gs.screen === "game_over"}

@@ -9,23 +9,31 @@
 		oncarddragstart?: (index: number, minion: MinionSnapshot, event: DragEvent) => void;
 		oncarddragend?: (event: DragEvent) => void;
 		ghostSourceShopIndex?: number | null;
+		targeting?: boolean;
+		ontargetselect?: (index: number) => void;
 	}
 
-	let { self, cardsDraggable = false, oncarddragstart, oncarddragend, ghostSourceShopIndex = null }: Props = $props();
+	let { self, cardsDraggable = false, oncarddragstart, oncarddragend, ghostSourceShopIndex = null, targeting = false, ontargetselect }: Props = $props();
 </script>
 
 <div class="shop-content">
 	<div class="shop-row">
 		{#each self.shop as slot, i (`${slot?.instance_id ?? "empty"}-${i}`)}
 			{#if slot}
-				<div class="shop-slot">
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<div
+					class="shop-slot"
+					class:target-highlight={targeting}
+					role={targeting ? "button" : undefined}
+					onclick={targeting ? () => ontargetselect?.(i) : undefined}
+				>
 					<MinionCard
 						minion={slot}
 						size="large"
-						draggable={cardsDraggable}
+						draggable={cardsDraggable && !targeting}
 						ghostSource={ghostSourceShopIndex === i}
-ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, slot, event) : undefined}
-						ondragend={cardsDraggable ? oncarddragend : undefined}
+						ondragstart={cardsDraggable && !targeting ? (event) => oncarddragstart?.(i, slot, event) : undefined}
+						ondragend={cardsDraggable && !targeting ? oncarddragend : undefined}
 					/>
 					<div class="buy-cost">3g</div>
 				</div>
@@ -77,6 +85,17 @@ ondragstart={cardsDraggable ? (event) => oncarddragstart?.(i, slot, event) : und
 		flex-direction: column;
 		align-items: center;
 		gap: 2px;
+		border-radius: 18px;
+		transition: box-shadow 0.15s, transform 0.15s;
+	}
+	.shop-slot.target-highlight {
+		cursor: pointer;
+		box-shadow: 0 0 0 2px #7ab0e088, 0 0 16px 4px #3a6ab033;
+		transform: translateY(-2px);
+	}
+	.shop-slot.target-highlight:hover {
+		box-shadow: 0 0 0 2px #a8d4ff, 0 0 24px 6px #5a8abf44;
+		transform: translateY(-4px);
 	}
 	.empty-slot {
 		width: 140px;
