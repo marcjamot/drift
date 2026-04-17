@@ -46,6 +46,19 @@ class CardPool:
 
         return [self.defs[cid].create_instance() for _, cid in selected]
 
+    def draw_at_tier(self, count: int, tier: int) -> List[Minion]:
+        """Draw up to count minions of exactly the given tier."""
+        eligible: List[tuple[int, str]] = [
+            (i, cid)
+            for i, cid in enumerate(self.available)
+            if self.defs[cid].tier == tier
+        ]
+        self.rng.shuffle(eligible)
+        selected: List[tuple[int, str]] = eligible[:count]
+        for idx, _ in sorted(selected, key=lambda x: x[0], reverse=True):
+            self.available.pop(idx)
+        return [self.defs[cid].create_instance() for _, cid in selected]
+
     def return_cards(self, minions: List[Minion | None]) -> None:
         """Return minions back to the available pool."""
         for m in minions:

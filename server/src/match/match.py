@@ -156,6 +156,12 @@ class Match:
             if result.get("ok"):
                 for pid in self.player_order:
                     await self.send_state(pid)
+                player = self.players.get(player_id)
+                if player and player.pending_discover:
+                    await self.send_to(player_id, {
+                        "type": "discover",
+                        "options": [m.to_dict() for m in player.pending_discover],
+                    })
 
             return result
 

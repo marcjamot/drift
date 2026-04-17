@@ -104,6 +104,7 @@ class PlayerState:
     shop: List[Optional[Minion]] = field(default_factory=list)  # None = bought slot
     frozen: bool = False
     locked: bool = False
+    pending_discover: Optional[List[Minion]] = field(default=None)
 
     def start_round(self, round_num: int) -> None:
         self.max_gold = gold_for_round(round_num)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 from ...cards.base import BuyEvent, PlayEvent, RoundStartEvent, SellEvent, SpawnEvent
@@ -97,6 +98,8 @@ class BuyPhase(Phase):
             return self._act_upgrade(player, match)
         if kind == "lock":
             return self._act_lock(player, match)
+        if kind == "discover_pick":
+            return self._act_discover_pick(player, action, match)
         return {"error": f"unknown action: {kind!r}"}
 
     # ── shop helper ───────────────────────────────────────────────────────────
@@ -125,6 +128,7 @@ class BuyPhase(Phase):
         BuyContext(player=player, rng=match.rng).trigger(
             "on_buy", BuyEvent(subject=minion, owner=player, shop_index=idx)
         )
+        self._check_triple(player, match)
         return {"ok": True}
 
     def _act_play(self, player: PlayerState, action: Message, match: Match) -> ActionResult:
@@ -140,6 +144,7 @@ class BuyPhase(Phase):
         ctx = BuyContext(player=player, rng=match.rng)
         ctx.trigger("on_play", PlayEvent(subject=minion, owner=player, hand_index=idx, source="hand"))
         ctx.trigger("on_spawn", SpawnEvent(subject=minion, source="play", owner=player))
+        self._check_triple(player, match)
         return {"ok": True}
 
     def _act_sell(self, player: PlayerState, action: Message, match: Match) -> ActionResult:
@@ -191,7 +196,61 @@ class BuyPhase(Phase):
         return {"ok": True}
 
     def _act_lock(self, player: PlayerState, match: Match) -> ActionResult:
+        if player.pending_discover:
+            return {"error": "resolve your discover first"}
         player.locked = True
         if all(p.locked for p in match.players.values()):
             match._phase_end.set()
         return {"ok": True}
+
+    def _act_discover_pick(self, player: PlayerState, action: Message, match: Match) -> ActionResult:
+        if not player.pending_discover:
+            return {"error": "no pending discover"}
+        idx = action.get("index")
+        if idx is None or not (0 <= idx < len(player.pending_discover)):
+            return {"error": "invalid discover index"}
+        options = player.pending_discover
+        chosen = options.pop(idx)
+        match.pool.return_cards(options)
+        player.pending_discover = None
+        player.hand.append(chosen)
+        self._check_triple(player, match)
+        return {"ok": True}
+
+    # ── triple / discover helpers ─────────────────────────────────────────────
+
+    def _check_triple(self, player: PlayerState, match: Match) -> None:
+        """Check if any card_id appears 3+ times across hand+board and resolve."""
+        all_cards = [m.card_id for m in player.hand] + [m.card_id for m in player.board]
+        counts = Counter(all_cards)
+        for card_id, count in counts.items():
+            if count >= 3:
+                self._resolve_triple(player, match, card_id)
+                return
+
+    def _resolve_triple(self, player: PlayerState, match: Match, card_id: str) -> None:
+        from ...cards.catalog import CARD_CATALOG
+
+        # Remove 3 copies — hand first, then board
+        removed = 0
+        for collection in [player.hand, player.board]:
+            i = 0
+            while i < len(collection) and removed < 3:
+                if collection[i].card_id == card_id:
+                    collection.pop(i)
+                    removed += 1
+                else:
+                    i += 1
+
+        # Create golden and place in hand
+        card_def = CARD_CATALOG[card_id]
+        golden = card_def.create_golden_instance()
+        player.hand.append(golden)
+
+        # Offer discover from tier+1 (capped at 6)
+        discover_tier = min(player.tavern_tier + 1, 6)
+        options = match.pool.draw_at_tier(3, discover_tier)
+        # Fall back to any available tier if not enough at that tier
+        if len(options) < 3:
+            options.extend(match.pool.draw(3 - len(options), discover_tier))
+        player.pending_discover = options

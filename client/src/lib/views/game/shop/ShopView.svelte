@@ -4,6 +4,7 @@
 	import ShopRow from "./ShopRow.svelte";
 	import HandRow from "./HandRow.svelte";
 	import BoardRow from "./BoardRow.svelte";
+	import DiscoverModal from "$lib/components/DiscoverModal.svelte";
 
 	interface Props {
 		healthFlash: boolean;
@@ -227,6 +228,10 @@
 		send({ type: "reorder", from_index: source.index, to_index: index });
 	}
 </script>
+
+{#if gs.discoverOptions}
+	<DiscoverModal options={gs.discoverOptions} />
+{/if}
 
 {#if gs.self}
 	<div class="buy-layout" class:flash={healthFlash}>
