@@ -262,7 +262,13 @@
 
 <div class="battle-arena" class:shaking={animShake} bind:this={arenaEl}>
 	{#if match.opponent}
-		<EnemyInfo name={match.opponent.name} health={match.opponent.health} armor={match.opponent.armor} hero={match.opponent.hero ?? null} />
+		<EnemyInfo
+			name={match.opponent.name}
+			health={match.opponent.health}
+			armor={match.opponent.armor}
+			hero={match.opponent.hero ?? null}
+			isGhost={match.opponent.is_ghost}
+		/>
 	{/if}
 
 	<EnemyBoard

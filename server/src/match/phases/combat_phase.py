@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from ...combat import resolve_combat
+from ...cards.base import Minion
 from .base import Phase
 
 if TYPE_CHECKING:
@@ -14,6 +15,18 @@ logger = logging.getLogger(__name__)
 Message = dict[str, Any]
 
 DISPLAY_DELAY = 6.0  # seconds after broadcasting results, for client animation
+
+
+def _board_from_snapshot(snapshot: list[dict[str, Any]]) -> list[Minion]:
+    return [
+        Minion(
+            **{
+                **minion,
+                "keywords": set(minion.get("keywords", [])),
+            }
+        )
+        for minion in snapshot
+    ]
 
 
 class CombatPhase(Phase):
@@ -58,17 +71,25 @@ class CombatPhase(Phase):
             p_b = match.players[pid_b]
 
             # 1. Snapshot boards before combat (resolve_combat takes deep copies)
-            initial_a = [m.to_dict() for m in p_a.board]
-            initial_b = [m.to_dict() for m in p_b.board]
+            initial_a = (
+                p_a.last_combat_board
+                if p_a.ghost else [m.to_dict() for m in p_a.board]
+            )
+            initial_b = (
+                p_b.last_combat_board
+                if p_b.ghost else [m.to_dict() for m in p_b.board]
+            )
 
             # Save last_combat_board for leaderboard display
-            p_a.last_combat_board = initial_a
-            p_b.last_combat_board = initial_b
+            if not p_a.ghost:
+                p_a.last_combat_board = initial_a
+            if not p_b.ghost:
+                p_b.last_combat_board = initial_b
 
             # 2. Resolve combat
             result = resolve_combat(
-                board_a=p_a.board,
-                board_b=p_b.board,
+                board_a=_board_from_snapshot(initial_a) if p_a.ghost else p_a.board,
+                board_b=_board_from_snapshot(initial_b) if p_b.ghost else p_b.board,
                 rng=match.rng,
                 tavern_tier_a=p_a.tavern_tier,
                 tavern_tier_b=p_b.tavern_tier,
@@ -79,15 +100,16 @@ class CombatPhase(Phase):
             # 3. Apply damage
             winner_idx: Optional[int] = result["winner"]
             damage: int = result["damage"]
-            if winner_idx == 0:
+            if winner_idx == 0 and not p_b.ghost:
                 match.apply_player_damage(p_b, damage)
-            elif winner_idx == 1:
+            elif winner_idx == 1 and not p_a.ghost:
                 match.apply_player_damage(p_a, damage)
 
             # 4. Send combat_log to any human in this pair
             for human_pid in [pid_a, pid_b]:
-                if match.players[human_pid].is_bot:
+                if match.players[human_pid].is_bot or match.players[human_pid].ghost:
                     continue
+                opponent_pid = pid_b if human_pid == pid_a else pid_a
                 await match._send_combat_log(
                     human_pid,
                     pid_a,
@@ -95,6 +117,7 @@ class CombatPhase(Phase):
                     initial_a,
                     initial_b,
                     result,
+                    match.players[opponent_pid].ghost,
                 )
 
             # Store result for combat_result message
@@ -102,13 +125,18 @@ class CombatPhase(Phase):
                 None if winner_idx is None
                 else [pid_a, pid_b][winner_idx]
             )
-            combat_result_payload = {
+            pair_results[pid_a] = {
                 "winner_player": winner_pid,
                 "damage": damage,
                 "health": {pid_a: p_a.health, pid_b: p_b.health},
+                "opponent_is_ghost": p_b.ghost,
             }
-            pair_results[pid_a] = combat_result_payload
-            pair_results[pid_b] = combat_result_payload
+            pair_results[pid_b] = {
+                "winner_player": winner_pid,
+                "damage": damage,
+                "health": {pid_a: p_a.health, pid_b: p_b.health},
+                "opponent_is_ghost": p_a.ghost,
+            }
 
         # 5. Assign placements for newly dead players
         newly_dead: List[str] = [

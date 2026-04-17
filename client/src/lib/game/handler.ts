@@ -105,6 +105,7 @@ export function handleMessage(msg: Record<string, unknown>) {
 		case "combat_log":
 			combat.combatMeta = {
 				players: msg.players as [string, string],
+				is_ghost: (msg.is_ghost as boolean) ?? false,
 				initial_a: msg.initial_a as MinionSnapshot[],
 				initial_b: msg.initial_b as MinionSnapshot[],
 			};

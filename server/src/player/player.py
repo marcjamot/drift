@@ -141,6 +141,7 @@ class PlayerState:
     # Multiplayer / bot fields
     is_bot: bool = False
     last_combat_board: List[dict] = field(default_factory=list)
+    ghost: bool = False
     mmr: int = 1000
     eliminated_round: Optional[int] = None
     placement: Optional[int] = None
@@ -168,9 +169,13 @@ class PlayerState:
             "armor": self.armor,
             "tavern_tier": self.tavern_tier,
             "locked": self.locked,
-            "board": [m.to_dict() for m in self.board],
+            "board": (
+                self.last_combat_board
+                if self.ghost else [m.to_dict() for m in self.board]
+            ),
             "hero": self.hero.to_dict() if self.hero else None,
             "is_bot": self.is_bot,
+            "is_ghost": self.ghost,
         }
         if as_self:
             base.update(

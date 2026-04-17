@@ -101,10 +101,27 @@ class Match:
         return [pid for pid in self.player_order if not self.players[pid].is_bot]
 
     def _alive_players(self) -> List[str]:
-        return [pid for pid in self.player_order if self.players[pid].health > 0]
+        return [
+            pid for pid in self.player_order
+            if self.players[pid].health > 0 and not self.players[pid].ghost
+        ]
+
+    def _ghost_players(self) -> List[str]:
+        return sorted(
+            [pid for pid in self.player_order if self.players[pid].ghost],
+            key=lambda pid: (
+                self.players[pid].eliminated_round or 0,
+                self.player_order.index(pid),
+            ),
+            reverse=True,
+        )
 
     def _compute_combat_pairs(self) -> None:
-        pairs = self._pairing_service.pair(self._alive_players(), self.rng)
+        pairs = self._pairing_service.pair(
+            self._alive_players(),
+            self.rng,
+            self._ghost_players(),
+        )
         self._combat_pairs = {}
         for player_id, opponent_id in pairs:
             self._combat_pairs[player_id] = opponent_id
@@ -155,6 +172,7 @@ class Match:
                     "health": p.health,
                     "armor": p.armor,
                     "is_bot": p.is_bot,
+                    "is_ghost": p.ghost,
                     "last_combat_board": p.last_combat_board,
                 }
                 for p in self.players.values()
@@ -203,11 +221,13 @@ class Match:
         initial_a: list[dict[str, Any]],
         initial_b: list[dict[str, Any]],
         result: dict[str, Any],
+        opponent_is_ghost: bool,
     ) -> None:
         await self.send_to(player_id, {
             "type": "combat_log",
             "round": self.round,
             "players": [player_a, player_b],
+            "is_ghost": opponent_is_ghost,
             "initial_a": initial_a,
             "initial_b": initial_b,
             "events": result["events"],
@@ -347,6 +367,7 @@ class Match:
         player = self.players[player_id]
         player.health = 0
         player.eliminated_round = self.round
+        player.ghost = True
         alive_after = sum(1 for p in self.players.values() if p.health > 0)
         player.placement = alive_after + 1
 
@@ -397,3 +418,4 @@ class Match:
         for pid in newly_dead:
             self.players[pid].eliminated_round = self.round
             self.players[pid].placement = alive_after + 1
+            self.players[pid].ghost = True
