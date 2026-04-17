@@ -70,6 +70,7 @@
 		</div>
 	{/if}
 	<div class="name">{minion.name}</div>
+	<div class="tribe">{minion.tribe}</div>
 	<div class="keywords">
 		{#each minion.keywords as kw (kw)}
 			<span class="keyword">{kw}</span>
@@ -289,6 +290,19 @@
 	}
 	.minion-card.size-large .name {
 		font-size: 16px;
+	}
+	.tribe {
+		font-size: 10px;
+		line-height: 1;
+		color: #8f98a8;
+		text-transform: uppercase;
+		letter-spacing: 0;
+	}
+	.minion-card.size-small .tribe {
+		font-size: 8px;
+	}
+	.minion-card.size-large .tribe {
+		font-size: 12px;
 	}
 	.keywords {
 		display: flex;
