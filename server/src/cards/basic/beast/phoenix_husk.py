@@ -6,7 +6,7 @@ from ....combat import CombatContext
 
 def rebirth(minion: Minion, event: DeathEvent, ctx: CombatContext) -> None:
     if ctx.is_self(minion, event.subject):
-        ctx.summon("phoenix")
+        ctx.summon("phoenix", after=minion)
 
 
 CARD = CardDef(

@@ -75,6 +75,7 @@
 			<span class="health-left-value">{minion.health}</span>
 		</div>
 	{/if}
+	<div class="tier-badge">T{minion.tier}</div>
 	<div class="name">{minion.name}</div>
 	<div class={`tribe tribe-${minion.tribe}`}>{minion.tribe}</div>
 	<div class="keywords">
@@ -128,6 +129,17 @@
 
 	.minion-card[onclick] {
 		cursor: pointer;
+	}
+
+	.tier-badge {
+		position: absolute;
+		top: 5px;
+		right: 6px;
+		font-size: 10px;
+		font-weight: 700;
+		color: #8899aa;
+		letter-spacing: 0.03em;
+		line-height: 1;
 	}
 
 	.minion-card.draggable {

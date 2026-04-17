@@ -21,7 +21,9 @@ from ..player.player import (
     SELL_VALUE,
     compute_upgrade_cost,
 )
+from .triples import auto_pick_discovers as auto_pick_discovers
 from .triples import check_triple
+from .triples import discover_pick as discover_pick
 
 ActionResult = Dict[str, Any]
 

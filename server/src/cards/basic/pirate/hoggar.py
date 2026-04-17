@@ -15,7 +15,7 @@ def summon_copy(minion: Minion, event: KillEvent, ctx: CombatContext) -> None:
     if getattr(minion, "hoggar_summoned", False):
         return
     minion.hoggar_summoned = True
-    ctx.summon_copy(minion)
+    ctx.summon_copy(minion, after=minion)
 
 
 CARD = CardDef(

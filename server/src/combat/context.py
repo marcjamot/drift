@@ -59,7 +59,7 @@ class CombatContext:
             "health": health,
         })
 
-    def summon(self, card_id: str, to_enemy: bool = False) -> Optional[Minion]:
+    def summon(self, card_id: str, to_enemy: bool = False, after: Optional[Minion] = None) -> Optional[Minion]:
         from ..cards.catalog import CARD_CATALOG
         from .engine import _dispatch_hooks  # deferred — avoids circular import
 
@@ -68,7 +68,11 @@ class CombatContext:
             return None
         m = CARD_CATALOG[card_id].create_instance()
         boards = self._ordered_boards()
-        board.append(m)
+        if after is not None and after in board:
+            insert_idx = min(board.index(after) + 1, len(board))
+            board.insert(insert_idx, m)
+        else:
+            board.append(m)
         target_side = (1 - self.friendly_side) if to_enemy else self.friendly_side
         m.instance_id = _combat_instance_id(boards, self.events, target_side)
         self.events.append({
@@ -77,6 +81,7 @@ class CombatContext:
             "minion": m.to_dict(),
             "side": target_side,
             "to_enemy": to_enemy,
+            "position": board.index(m),
         })
         _dispatch_hooks(
             boards, self.events, "on_spawn",
@@ -85,7 +90,7 @@ class CombatContext:
         )
         return m
 
-    def summon_copy(self, minion: Minion, to_enemy: bool = False) -> Optional[Minion]:
+    def summon_copy(self, minion: Minion, to_enemy: bool = False, after: Optional[Minion] = None) -> Optional[Minion]:
         from .engine import _dispatch_hooks
 
         board = self.enemy_board if to_enemy else self.friendly_board
@@ -93,7 +98,11 @@ class CombatContext:
             return None
         m = minion.copy()
         boards = self._ordered_boards()
-        board.append(m)
+        if after is not None and after in board:
+            insert_idx = min(board.index(after) + 1, len(board))
+            board.insert(insert_idx, m)
+        else:
+            board.append(m)
         target_side = (1 - self.friendly_side) if to_enemy else self.friendly_side
         m.instance_id = _combat_instance_id(boards, self.events, target_side)
         self.events.append({
@@ -102,6 +111,7 @@ class CombatContext:
             "minion": m.to_dict(),
             "side": target_side,
             "to_enemy": to_enemy,
+            "position": board.index(m),
         })
         _dispatch_hooks(
             boards, self.events, "on_spawn",

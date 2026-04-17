@@ -105,6 +105,9 @@ class CombatPhase(Phase):
             elif winner_idx == 1 and not p_a.ghost:
                 match.apply_player_damage(p_a, damage)
 
+            # Boards are left intact — resolve_combat worked on deep copies so
+            # the live board is unchanged. Deaths are temporary (combat only).
+
             # 4. Send combat_log to any human in this pair
             for human_pid in [pid_a, pid_b]:
                 if match.players[human_pid].is_bot or match.players[human_pid].ghost:

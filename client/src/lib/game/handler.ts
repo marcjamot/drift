@@ -136,15 +136,28 @@ export function handleMessage(msg: Record<string, unknown>) {
 			stopBuyTimer();
 			resetCombat();
 			return;
-		case "combat_log":
+		case "combat_log": {
+			const pre_health: Record<string, number> = {};
+			const pre_armor: Record<string, number> = {};
+			if (match.self) {
+				pre_health[match.self.player_id] = match.self.health;
+				pre_armor[match.self.player_id] = match.self.armor;
+			}
+			if (match.opponent) {
+				pre_health[match.opponent.player_id] = match.opponent.health;
+				pre_armor[match.opponent.player_id] = match.opponent.armor;
+			}
 			combat.combatMeta = {
 				players: msg.players as [string, string],
 				is_ghost: (msg.is_ghost as boolean) ?? false,
 				initial_a: msg.initial_a as MinionSnapshot[],
 				initial_b: msg.initial_b as MinionSnapshot[],
+				pre_health,
+				pre_armor,
 			};
 			combat.combatLog = msg.events as CombatEvent[];
 			return;
+		}
 		case "combat_result":
 			combat.combatResult = msg as unknown as CombatResultMsg;
 			return;
