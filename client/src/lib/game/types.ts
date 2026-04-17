@@ -30,6 +30,7 @@ export interface SelfSnapshot {
 	player_id: string;
 	name: string;
 	health: number;
+	armor: number;
 	tavern_tier: number;
 	upgrade_cost: number;
 	locked: boolean;
@@ -47,6 +48,7 @@ export interface OpponentSnapshot {
 	player_id: string;
 	name: string;
 	health: number;
+	armor: number;
 	tavern_tier: number;
 	locked: boolean;
 	board: MinionSnapshot[];
@@ -58,6 +60,7 @@ export interface LeaderboardEntry {
 	player_id: string;
 	name: string;
 	health: number;
+	armor: number;
 	is_bot: boolean;
 	last_combat_board: MinionSnapshot[];
 }

@@ -21,6 +21,7 @@ HERO = HeroDef(
     id="kron",
     name="Kron, the Warchief",
     description="Choose a minion in your shop. Give it +3/+0.",
+    armor=10,
     hero_power_type="active_target_shop",
     hero_power=_hero_power,
 )

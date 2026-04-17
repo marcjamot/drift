@@ -21,6 +21,7 @@ HERO = HeroDef(
     id="zela",
     name="Zela, the Alchemist",
     description="Choose a minion in your hand. Give it +2/+2.",
+    armor=10,
     hero_power_type="active_target_hand",
     hero_power=_hero_power,
 )

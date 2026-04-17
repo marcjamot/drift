@@ -110,6 +110,11 @@ class Match:
             self._combat_pairs[player_id] = opponent_id
             self._combat_pairs[opponent_id] = player_id
 
+    def apply_player_damage(self, player: PlayerState, amount: int) -> None:
+        absorbed = min(player.armor, amount)
+        player.armor -= absorbed
+        player.health -= amount - absorbed
+
     # ── messaging ─────────────────────────────────────────────────────────────
 
     async def send_to(self, player_id: str, msg: Message) -> None:
@@ -148,6 +153,7 @@ class Match:
                     "player_id": p.player_id,
                     "name": p.name,
                     "health": p.health,
+                    "armor": p.armor,
                     "is_bot": p.is_bot,
                     "last_combat_board": p.last_combat_board,
                 }

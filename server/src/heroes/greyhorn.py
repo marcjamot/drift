@@ -21,6 +21,7 @@ HERO = HeroDef(
     id="greyhorn",
     name="Greyhorn",
     description="After buying a minion, give it +2/+0.",
+    armor=5,
     hero_power_type="passive",
     on_buy=_on_buy,
 )
