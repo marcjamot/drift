@@ -29,8 +29,8 @@ class CombatPhase(Phase):
         5. Assign placements for newly dead players
         6. Check win condition
         7. Send combat_result to each human
-        8. broadcast_state
-        9. notify_eliminations  — sends game_over to dead humans
+        8. Broadcast updated state
+        9. Notify eliminations  — sends game_over to dead humans
        10. sleep DISPLAY_DELAY (only if human is still alive / had a combat)
     """
 
@@ -40,7 +40,7 @@ class CombatPhase(Phase):
     async def enter(self, match: Match) -> None:
         match.phase = "combat"
         match._buy_phase_started_at = None
-        await match.broadcast({"type": "combat_start", "round": match.round})
+        await match._broadcast_combat_start()
 
     async def wait(self, match: Match) -> None:
         pairs_done: Set[str] = set()
@@ -88,16 +88,14 @@ class CombatPhase(Phase):
             for human_pid in [pid_a, pid_b]:
                 if match.players[human_pid].is_bot:
                     continue
-                await match.send_to(human_pid, {
-                    "type": "combat_log",
-                    "round": match.round,
-                    "players": [pid_a, pid_b],
-                    "initial_a": initial_a,
-                    "initial_b": initial_b,
-                    "events": result["events"],
-                    "surviving_a": result["surviving_a"],
-                    "surviving_b": result["surviving_b"],
-                })
+                await match._send_combat_log(
+                    human_pid,
+                    pid_a,
+                    pid_b,
+                    initial_a,
+                    initial_b,
+                    result,
+                )
 
             # Store result for combat_result message
             winner_pid: Optional[str] = (
@@ -132,17 +130,13 @@ class CombatPhase(Phase):
         # 7. Send combat_result to each human
         for pid in match._human_players():
             if pid in pair_results:
-                await match.send_to(pid, {
-                    "type": "combat_result",
-                    "round": match.round,
-                    **pair_results[pid],
-                })
+                await match._send_combat_result(pid, pair_results[pid])
 
         # 8. Broadcast updated state (includes new HPs and leaderboard)
-        await match.broadcast_state()
+        await match._broadcast_state()
 
         # 9. Send game_over to humans who just died
-        await match.notify_eliminations()
+        await match._notify_eliminations()
 
         # 10. Display delay — buy timer must not start until this returns
         await asyncio.sleep(DISPLAY_DELAY)

@@ -56,7 +56,7 @@ class BuyPhase(Phase):
             if player.is_bot and player.health > 0:
                 run_bot_buy_phase(player, match)
 
-        await match.broadcast_state()
+        await match._broadcast_state()
 
     async def wait(self, match: Match) -> None:
         try:
