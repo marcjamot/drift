@@ -42,6 +42,7 @@ export interface SelfSnapshot {
 	frozen: boolean;
 	hero: HeroSnapshot | null;
 	hero_power_uses_left: number;  // 1 = available, 0 = spent
+	is_ghost: boolean;
 }
 
 export interface OpponentSnapshot {
@@ -54,6 +55,7 @@ export interface OpponentSnapshot {
 	board: MinionSnapshot[];
 	hero: HeroSnapshot | null;
 	is_bot: boolean;
+	is_ghost: boolean;
 }
 
 export interface LeaderboardEntry {
@@ -62,6 +64,7 @@ export interface LeaderboardEntry {
 	health: number;
 	armor: number;
 	is_bot: boolean;
+	is_ghost: boolean;
 	last_combat_board: MinionSnapshot[];
 }
 
@@ -142,6 +145,7 @@ export type CombatEvent =
 
 export interface CombatMeta {
 	players: [string, string];
+	is_ghost: boolean;
 	initial_a: MinionSnapshot[];
 	initial_b: MinionSnapshot[];
 }
@@ -152,6 +156,7 @@ export interface CombatResultMsg {
 	winner_player: string | null;
 	damage: number;
 	health: Record<string, number>;
+	opponent_is_ghost: boolean;
 }
 
 export type Intent =
