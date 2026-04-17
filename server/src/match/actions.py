@@ -171,6 +171,11 @@ def discover_pick(
     return {"ok": True}
 
 
+def auto_pick_discovers(player: PlayerState, pool: CardPool, rng: random.Random) -> None:
+    while player.pending_discover:
+        discover_pick(player, 0, pool, rng)
+
+
 def use_hero_power(
     player: PlayerState,
     action: Dict[str, Any],
@@ -242,17 +247,17 @@ def _resolve_triple(
 ) -> None:
     from ..cards.catalog import CARD_CATALOG
 
-    removed = 0
+    removed_cards = []
     for collection in [player.hand, player.board]:
         i = 0
-        while i < len(collection) and removed < 3:
+        while i < len(collection) and len(removed_cards) < 3:
             if collection[i].card_id == card_id:
-                collection.pop(i)
-                removed += 1
+                removed_cards.append(collection.pop(i))
             else:
                 i += 1
 
     card_def = CARD_CATALOG[card_id]
+    pool.return_cards(removed_cards)
     golden = card_def.create_golden_instance()
     player.hand.append(golden)
 

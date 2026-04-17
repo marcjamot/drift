@@ -54,6 +54,7 @@
 	class:selected
 	class:taunt={minion.keywords.includes("taunt")}
 	class:divine={minion.divine_shield}
+	class:golden={minion.golden}
 	class:stricken
 	class:impact
 	class:attack-up={attackDirection === "up"}
@@ -190,6 +191,10 @@
 	.minion-card.divine {
 		border-color: #6090d0;
 		box-shadow: 0 0 8px #6090d033;
+	}
+	.minion-card.golden {
+		border-color: #d4a020;
+		box-shadow: 0 0 14px #d4a02066, inset 0 0 18px #d4a02022;
 	}
 	/* Shake when struck */
 	.minion-card.stricken {

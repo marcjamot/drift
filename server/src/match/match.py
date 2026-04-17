@@ -248,8 +248,10 @@ class Match:
 
     async def _send_discover(self, player_id: str) -> None:
         player = self.players[player_id]
+        if player.is_bot:
+            return
         await self.send_to(player_id, {
-            "type": "discover",
+            "type": "discover_options",
             "options": [m.to_dict() for m in player.pending_discover],
         })
 

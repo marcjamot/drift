@@ -130,7 +130,7 @@ export function handleMessage(msg: Record<string, unknown>) {
 			}
 			showError(msg.message as string, 4000);
 			return;
-		case "discover":
+		case "discover_options":
 			ui.discoverOptions = msg.options as MinionSnapshot[];
 			return;
 		case "action_result":
