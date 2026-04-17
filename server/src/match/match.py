@@ -413,11 +413,11 @@ class Match:
     def assign_placements_for_dead(self, newly_dead: List[str]) -> None:
         """
         Called after combat each round.  Players in newly_dead all died this
-        round — they share a placement equal to (alive_after + 1).
+        round and fill the next placement slots after the remaining alive players.
         The last surviving player will be assigned placement 1 at match end.
         """
         alive_after = sum(1 for p in self.players.values() if p.health > 0)
-        for pid in newly_dead:
+        for offset, pid in enumerate(newly_dead):
             self.players[pid].eliminated_round = self.round
-            self.players[pid].placement = alive_after + 1
+            self.players[pid].placement = alive_after + len(newly_dead) - offset
             self.players[pid].ghost = True

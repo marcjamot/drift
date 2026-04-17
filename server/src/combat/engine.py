@@ -6,7 +6,7 @@ dict including every event in order — no mutation of live PlayerState occurs h
 """
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 from ..cards.base import (
@@ -29,11 +29,26 @@ CombatEvent = dict[str, Any]
 CombatResult = dict[str, Any]
 
 
+def _combat_instance_id(boards: List[List[Minion]], events: List[CombatEvent], side: int) -> str:
+    existing = {
+        minion.instance_id
+        for board in boards
+        for minion in board
+    }
+    index = len(events)
+    while True:
+        instance_id = f"c{side}{index:06x}"
+        if instance_id not in existing:
+            return instance_id
+        index += 1
+
+
 @dataclass
 class CombatContext:
     friendly_board: List[Minion]
     enemy_board: List[Minion]
     events: List[CombatEvent]
+    rng: random.Random = field(default_factory=random.Random)
     friendly_side: int = 0
 
     def deal_damage(self, minion: Minion, amount: int) -> int:
@@ -70,8 +85,14 @@ class CombatContext:
         board: List[Minion] = self.enemy_board if to_enemy else self.friendly_board
         if len(board) < BOARD_SIZE and card_id in CARD_CATALOG:
             m: Minion = CARD_CATALOG[card_id].create_instance()
+            boards = (
+                [self.friendly_board, self.enemy_board]
+                if self.friendly_side == 0
+                else [self.enemy_board, self.friendly_board]
+            )
             board.append(m)
             target_side: int = (1 - self.friendly_side) if to_enemy else self.friendly_side
+            m.instance_id = _combat_instance_id(boards, self.events, target_side)
             self.events.append(
                 {
                     "type": "summon",
@@ -82,16 +103,47 @@ class CombatContext:
                 }
             )
             _dispatch_hooks(
-                [self.friendly_board, self.enemy_board]
-                if self.friendly_side == 0
-                else [self.enemy_board, self.friendly_board],
+                boards,
                 self.events,
                 "on_spawn",
                 SpawnEvent(subject=m, source="summon", subject_side=target_side),
+                self.rng,
                 subject=m,
             )
             return m
         return None
+
+    def summon_copy(self, minion: Minion, to_enemy: bool = False) -> Optional[Minion]:
+        board: List[Minion] = self.enemy_board if to_enemy else self.friendly_board
+        if len(board) >= BOARD_SIZE:
+            return None
+        m = minion.copy()
+        boards = (
+            [self.friendly_board, self.enemy_board]
+            if self.friendly_side == 0
+            else [self.enemy_board, self.friendly_board]
+        )
+        board.append(m)
+        target_side: int = (1 - self.friendly_side) if to_enemy else self.friendly_side
+        m.instance_id = _combat_instance_id(boards, self.events, target_side)
+        self.events.append(
+            {
+                "type": "summon",
+                "card_id": m.card_id,
+                "minion": m.to_dict(),
+                "side": target_side,
+                "to_enemy": to_enemy,
+            }
+        )
+        _dispatch_hooks(
+            boards,
+            self.events,
+            "on_spawn",
+            SpawnEvent(subject=m, source="summon", subject_side=target_side),
+            self.rng,
+            subject=m,
+        )
+        return m
 
     def add_keyword(self, minion: Minion, keyword: str) -> None:
         minion.keywords.add(keyword)
@@ -152,6 +204,7 @@ def _dispatch_hooks(
     events: List[CombatEvent],
     hook_name: str,
     event: CardEvent,
+    rng: random.Random | None = None,
     subject: Optional[Minion] = None,
 ) -> None:
     """Dispatch a hook event through the 5-phase lifecycle.
@@ -181,12 +234,14 @@ def _dispatch_hooks(
 
     if not entries:
         return
+    rng = rng or random.Random(0)
 
     def _ctx(side: int) -> CombatContext:
         return CombatContext(
             friendly_board=boards[side],
             enemy_board=boards[1 - side],
             events=events,
+            rng=rng,
             friendly_side=side,
         )
 
@@ -289,6 +344,7 @@ def _dispatch_damage(
     boards: List[List[Minion]],
     events: List[CombatEvent],
     heroes: List[Optional[HeroDef]],
+    rng: random.Random,
     subject: Minion,
     subject_side: int,
     actor: Minion,
@@ -304,7 +360,7 @@ def _dispatch_damage(
         target_side=subject_side,
         amount=amount,
     )
-    _dispatch_hooks(boards, events, "on_damage", damage_event, subject=subject)
+    _dispatch_hooks(boards, events, "on_damage", damage_event, rng, subject=subject)
     _dispatch_hero_hooks(boards, events, "on_damage", damage_event, heroes, subject_side=subject_side)
 
 
@@ -312,6 +368,7 @@ def _dispatch_kill(
     boards: List[List[Minion]],
     events: List[CombatEvent],
     heroes: List[Optional[HeroDef]],
+    rng: random.Random,
     killer: Minion,
     killer_side: int,
     target: Minion,
@@ -325,7 +382,7 @@ def _dispatch_kill(
         subject=killer,
         subject_side=killer_side,
     )
-    _dispatch_hooks(boards, events, "on_kill", kill_event, subject=killer)
+    _dispatch_hooks(boards, events, "on_kill", kill_event, rng, subject=killer)
     _dispatch_hero_hooks(boards, events, "on_kill", kill_event, heroes, subject_side=killer_side)
 
 
@@ -333,6 +390,7 @@ def _resolve_deaths(
     boards: List[List[Minion]],
     events: List[CombatEvent],
     heroes: List[Optional[HeroDef]],
+    rng: random.Random,
     killer: Minion | None = None,
     killer_side: int | None = None,
 ) -> None:
@@ -364,7 +422,7 @@ def _resolve_deaths(
                     killer=killer,
                     killer_side=killer_side,
                 )
-                _dispatch_hooks(boards, events, "on_death", death_event, subject=corpse)
+                _dispatch_hooks(boards, events, "on_death", death_event, rng, subject=corpse)
                 _dispatch_hero_hooks(boards, events, "on_death", death_event, heroes, subject_side=side)
                 if corpse in board:
                     board.remove(corpse)
@@ -405,7 +463,7 @@ def resolve_combat(
     heroes: List[Optional[HeroDef]] = [hero_a, hero_b]
 
     combat_start = CombatStartEvent()
-    _dispatch_hooks(boards, events, "on_combat_start", combat_start)
+    _dispatch_hooks(boards, events, "on_combat_start", combat_start, rng)
     _dispatch_hero_hooks(boards, events, "on_combat_start", combat_start, heroes)
 
     if len(boards[0]) > len(boards[1]):
@@ -434,7 +492,7 @@ def resolve_combat(
             actor=attacker, actor_side=current,
             target=defender, target_side=1 - current,
         )
-        _dispatch_hooks(boards, events, "on_target", target_event, subject=attacker)
+        _dispatch_hooks(boards, events, "on_target", target_event, rng, subject=attacker)
         _dispatch_hero_hooks(boards, events, "on_target", target_event, heroes, subject_side=current)
 
         events.append(
@@ -453,7 +511,7 @@ def resolve_combat(
             actor=attacker, actor_side=current,
             target=defender, target_side=1 - current,
         )
-        _dispatch_hooks(boards, events, "on_attack", attack_event, subject=attacker)
+        _dispatch_hooks(boards, events, "on_attack", attack_event, rng, subject=attacker)
         _dispatch_hero_hooks(boards, events, "on_attack", attack_event, heroes, subject_side=current)
 
         defender_idx = boards[1 - current].index(defender) if defender in boards[1 - current] else -1
@@ -468,13 +526,13 @@ def resolve_combat(
         damage_to_attacker: int = _deal_combat_damage(defender, attacker, defender.attack)
         damage_to_defender: int = _deal_combat_damage(attacker, defender, attacker.attack)
 
-        _dispatch_damage(boards, events, heroes, attacker, current, defender, 1 - current, damage_to_attacker)
-        _dispatch_damage(boards, events, heroes, defender, 1 - current, attacker, current, damage_to_defender)
+        _dispatch_damage(boards, events, heroes, rng, attacker, current, defender, 1 - current, damage_to_attacker)
+        _dispatch_damage(boards, events, heroes, rng, defender, 1 - current, attacker, current, damage_to_defender)
 
         if damage_to_defender > 0 and not defender.is_alive():
-            _dispatch_kill(boards, events, heroes, attacker, current, defender, 1 - current)
+            _dispatch_kill(boards, events, heroes, rng, attacker, current, defender, 1 - current)
         if damage_to_attacker > 0 and not attacker.is_alive():
-            _dispatch_kill(boards, events, heroes, defender, 1 - current, attacker, current)
+            _dispatch_kill(boards, events, heroes, rng, defender, 1 - current, attacker, current)
 
         events.append(
             {
@@ -494,9 +552,9 @@ def resolve_combat(
             if splash_target not in boards[1 - current] or not splash_target.is_alive():
                 continue
             splash_damage = _deal_combat_damage(attacker, splash_target, attacker.attack)
-            _dispatch_damage(boards, events, heroes, splash_target, 1 - current, attacker, current, splash_damage)
+            _dispatch_damage(boards, events, heroes, rng, splash_target, 1 - current, attacker, current, splash_damage)
             if splash_damage > 0 and not splash_target.is_alive():
-                _dispatch_kill(boards, events, heroes, attacker, current, splash_target, 1 - current)
+                _dispatch_kill(boards, events, heroes, rng, attacker, current, splash_target, 1 - current)
             events.append(
                 {
                     "type": "cleave_splash",
@@ -510,7 +568,7 @@ def resolve_combat(
                 }
             )
 
-        _resolve_deaths(boards, events, heroes, killer=attacker, killer_side=current)
+        _resolve_deaths(boards, events, heroes, rng, killer=attacker, killer_side=current)
         attacker_alive = any(
             minion.instance_id == attacker.instance_id and minion.is_alive()
             for minion in boards[current]
