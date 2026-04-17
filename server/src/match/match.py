@@ -223,8 +223,9 @@ class Match:
             })
 
         # ── initial shops ─────────────────────────────────────────────────────
+        from .actions import refresh_shop
         for player in self.players.values():
-            self._buy_phase._refresh_shop(player, self)
+            refresh_shop(player, self.pool)
 
         # ── game loop ─────────────────────────────────────────────────────────
         while self.phase != "game_over":
