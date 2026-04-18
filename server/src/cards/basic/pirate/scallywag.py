@@ -6,7 +6,7 @@ from ....combat import CombatContext
 
 def deathrattle(minion: Minion, event: DeathEvent, ctx: CombatContext) -> None:
     if ctx.is_self(minion, event.subject):
-        ctx.summon("sky_pirate")
+        ctx.summon("sky_pirate", after=minion)
 
 
 CARD = CardDef(

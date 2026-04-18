@@ -1,9 +1,7 @@
-import asyncio
-import json
 
 from src.cards.catalog import CARD_CATALOG
 from src.match import actions
-from src.match.match import Match
+from src.match.triples import auto_pick_discovers, check_triple
 from src.player.player import BUY_COST, PlayerState
 
 from .conftest import make_player, make_pool, make_rng
@@ -78,64 +76,29 @@ def test_returned_triple_copies_increase_original_card_pool_count_by_three():
     assert pool.available.count("shield_bearer") == before + 3
 
 
-def test_bot_auto_picks_discover_option_zero_without_sending_offer():
-    bot = PlayerState(
-        player_id="bot",
-        name="Bot",
-        gold=BUY_COST,
-        max_gold=BUY_COST,
-        hand=[CARD_CATALOG["shield_bearer"].create_instance()],
-        board=[CARD_CATALOG["shield_bearer"].create_instance()],
-        shop=[CARD_CATALOG["shield_bearer"].create_instance()],
-        is_bot=True,
-    )
-    match = Match("m1", [bot], seed=42)
-    match.phase = "buy"
-    match._current_phase = match._buy_phase
-    sent: list[dict] = []
+def test_bot_auto_picks_discover_and_does_not_leave_pending():
+    bot = PlayerState(player_id="bot", name="Bot", is_bot=True)
+    pool = make_pool()
+    bot.pending_discover = [CARD_CATALOG["shield_bearer"].create_instance() for _ in range(3)]
+    first_option_id = bot.pending_discover[0].card_id
 
-    async def send(raw: str) -> None:
-        sent.append(json.loads(raw))
+    auto_pick_discovers(bot, pool, make_rng())
 
-    match.register_sender("bot", send)
-
-    result = asyncio.run(match.handle_action("bot", {"type": "buy", "shop_index": 0}))
-
-    assert result == {"ok": True}
     assert bot.pending_discover is None
-    assert not any(msg["type"] == "discover_options" for msg in sent)
-    assert len(bot.hand) == 2
-    assert bot.hand[0].golden
-    assert bot.hand[1].tier == 2
+    assert any(m.card_id == first_option_id for m in bot.hand)
 
 
-def test_human_triple_sends_discover_options_message():
-    player = PlayerState(
-        player_id="p1",
-        name="p1",
-        gold=BUY_COST,
-        max_gold=BUY_COST,
-        hand=[CARD_CATALOG["shield_bearer"].create_instance()],
-        board=[CARD_CATALOG["shield_bearer"].create_instance()],
-        shop=[CARD_CATALOG["shield_bearer"].create_instance()],
-    )
-    match = Match("m1", [player], seed=42)
-    match.phase = "buy"
-    match._current_phase = match._buy_phase
-    sent: list[dict] = []
+def test_human_triple_leaves_pending_discover_for_client():
+    """For human players, triple resolution leaves pending_discover for the client to pick."""
+    player = make_player()
+    pool = make_pool()
+    player.hand = [CARD_CATALOG["shield_bearer"].create_instance() for _ in range(3)]
 
-    async def send(raw: str) -> None:
-        sent.append(json.loads(raw))
+    check_triple(player, pool, make_rng())
 
-    match.register_sender("p1", send)
-
-    result = asyncio.run(match.handle_action("p1", {"type": "buy", "shop_index": 0}))
-
-    assert result == {"ok": True}
-    discover_messages = [msg for msg in sent if msg["type"] == "discover_options"]
-    assert len(discover_messages) == 1
-    assert len(discover_messages[0]["options"]) == 3
-    assert {card["tier"] for card in discover_messages[0]["options"]} == {2}
+    # Human's discover is NOT auto-resolved — client sends discover_pick
+    assert player.pending_discover is not None
+    assert len(player.pending_discover) == 3
 
 
 def test_triple_does_not_trigger_on_two_copies():

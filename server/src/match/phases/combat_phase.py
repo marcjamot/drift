@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 from ...combat import resolve_combat
 from ...cards.base import Minion
@@ -104,6 +104,9 @@ class CombatPhase(Phase):
                 match.apply_player_damage(p_b, damage)
             elif winner_idx == 1 and not p_a.ghost:
                 match.apply_player_damage(p_a, damage)
+
+            # Boards are left intact — resolve_combat worked on deep copies so
+            # the live board is unchanged. Deaths are temporary (combat only).
 
             # 4. Send combat_log to any human in this pair
             for human_pid in [pid_a, pid_b]:

@@ -7,8 +7,8 @@ from ....combat import CombatContext
 def deathrattle(minion: Minion, event: DeathEvent, ctx: CombatContext) -> None:
     if not ctx.is_self(minion, event.subject):
         return
-    ctx.summon("cub")
-    ctx.summon("cub")
+    first = ctx.summon("cub", after=minion)
+    ctx.summon("cub", after=first)
 
 
 CARD = CardDef(

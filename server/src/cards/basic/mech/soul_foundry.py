@@ -8,7 +8,7 @@ def forge_souls(minion: Minion, event: DeathEvent, ctx: CombatContext) -> None:
     if ctx.is_self(minion, event.subject):
         return
     if ctx.is_friendly(minion, event.subject, event.subject_side):
-        ctx.summon("ember")
+        ctx.summon("ember", after=minion)
 
 
 CARD = CardDef(

@@ -199,8 +199,8 @@
 					const side = e.side as number;
 					const isOppSide = isSelfA ? side === 1 : side === 0;
 					animNewIds = new Set([m.instance_id]);
-					if (isOppSide) animOppBoard = [...animOppBoard, m];
-					else animSelfBoard = [...animSelfBoard, m];
+					if (isOppSide) animOppBoard = insertMinion(animOppBoard, m, e.position);
+					else animSelfBoard = insertMinion(animSelfBoard, m, e.position);
 					animText = `${m.name} summoned`;
 					await sleep(600);
 					setTimeout(() => (animNewIds = new Set()), 500);
@@ -261,7 +261,22 @@
 </script>
 
 <div class="battle-arena" class:shaking={animShake} bind:this={arenaEl}>
-	{#if match.opponent}
+	{#if match.opponent && combat.combatMeta}
+		{@const pid = match.opponent.player_id}
+		{@const health = animPhase === "done" && combat.combatResult
+			? (combat.combatResult.health[pid] ?? match.opponent.health)
+			: (combat.combatMeta.pre_health[pid] ?? match.opponent.health)}
+		{@const armor = animPhase === "done" && combat.combatResult
+			? match.opponent.armor
+			: (combat.combatMeta.pre_armor[pid] ?? match.opponent.armor)}
+		<EnemyInfo
+			name={match.opponent.name}
+			{health}
+			{armor}
+			hero={match.opponent.hero ?? null}
+			isGhost={match.opponent.is_ghost}
+		/>
+	{:else if match.opponent}
 		<EnemyInfo
 			name={match.opponent.name}
 			health={match.opponent.health}
@@ -314,7 +329,16 @@
 		{healthFlash}
 	/>
 
-	{#if match.self}
+	{#if match.self && combat.combatMeta}
+		{@const pid = match.self.player_id}
+		{@const health = animPhase === "done" && combat.combatResult
+			? (combat.combatResult.health[pid] ?? match.self.health)
+			: (combat.combatMeta.pre_health[pid] ?? match.self.health)}
+		{@const armor = animPhase === "done" && combat.combatResult
+			? match.self.armor
+			: (combat.combatMeta.pre_armor[pid] ?? match.self.armor)}
+		<PlayerInfo name={match.self.name} {health} {armor} hero={match.self.hero ?? null} />
+	{:else if match.self}
 		<PlayerInfo name={match.self.name} health={match.self.health} armor={match.self.armor} hero={match.self.hero ?? null} />
 	{/if}
 

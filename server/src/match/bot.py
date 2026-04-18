@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
     from ..cards.base import Minion
@@ -11,32 +11,39 @@ if TYPE_CHECKING:
 from ..cards.base import Tribe
 from ..player.player import BOARD_SIZE, BUY_COST
 from . import actions
+from .triples import auto_pick_discovers
+
+
+class CardScore(NamedTuple):
+    """Comparable score for ranking cards. Higher is better (compared tuple-wise)."""
+    tribe_bonus: int   # 2=completes a tribe run, 1=matches existing tribe, 0=no match
+    stats: int         # attack + health
+    tier_neg: int      # negative tier — prefer lower-tier cards early in the game
 
 
 def run_bot_buy_phase(player: "PlayerState", match: "Match") -> None:
     if player.gold < 1:
-        actions.auto_pick_discovers(player, match.pool, match.rng)
+        auto_pick_discovers(player, match.pool, match.rng)
         actions.lock(player)
         return
 
     if player.tavern_tier < 4 and player.upgrade_cost <= player.gold * 0.4:
         actions.upgrade(player, match.round)
-        actions.auto_pick_discovers(player, match.pool, match.rng)
+        auto_pick_discovers(player, match.pool, match.rng)
 
     _play_best_hand_cards(player, match)
-    actions.auto_pick_discovers(player, match.pool, match.rng)
+    auto_pick_discovers(player, match.pool, match.rng)
 
     while player.gold >= BUY_COST and len(player.board) < BOARD_SIZE:
         shop_index = _best_shop_index(player)
         if shop_index is None:
             break
-
         result = actions.buy(player, shop_index, match.pool, match.rng)
         if "error" in result:
             break
-        actions.auto_pick_discovers(player, match.pool, match.rng)
+        auto_pick_discovers(player, match.pool, match.rng)
         _play_best_hand_cards(player, match)
-        actions.auto_pick_discovers(player, match.pool, match.rng)
+        auto_pick_discovers(player, match.pool, match.rng)
 
     if player.gold == 1 and _should_freeze_for_shop(player) and not player.frozen:
         actions.freeze(player)
@@ -55,56 +62,44 @@ def _play_best_hand_cards(player: "PlayerState", match: "Match") -> None:
             break
 
 
-def _hand_score(card: "Minion", board: list["Minion"]) -> tuple[int, int, int]:
+def _hand_score(card: "Minion", board: list["Minion"]) -> CardScore:
     tribe_count = _tribe_counts(board).get(card.tribe, 0)
     completes_tribe = card.tribe != Tribe.NEUTRAL and tribe_count + 1 >= 3
     matches_tribe = card.tribe != Tribe.NEUTRAL and tribe_count > 0
-    return (
-        2 if completes_tribe else 1 if matches_tribe else 0,
-        card.attack + card.health,
-        -card.tier,
+    return CardScore(
+        tribe_bonus=2 if completes_tribe else 1 if matches_tribe else 0,
+        stats=card.attack + card.health,
+        tier_neg=-card.tier,
     )
 
 
 def _best_shop_index(player: "PlayerState") -> int | None:
-    candidates = [
-        (i, card)
-        for i, card in enumerate(player.shop)
-        if card is not None
-    ]
+    candidates = [(i, c) for i, c in enumerate(player.shop) if c is not None]
     if not candidates:
         return None
-
     board_tribes = _tribe_counts(player.board)
-    return max(
-        candidates,
-        key=lambda item: _shop_score(item[1], board_tribes),
-    )[0]
+    return max(candidates, key=lambda item: _shop_score(item[1], board_tribes))[0]
 
 
-def _shop_score(card: "Minion", board_tribes: Counter[str]) -> tuple[int, int, int]:
-    matches_tribe = (
-        card.tribe != Tribe.NEUTRAL
-        and board_tribes.get(card.tribe, 0) > 0
-    )
-    return (
-        1 if matches_tribe else 0,
-        card.attack + card.health,
-        -card.tier,
+def _shop_score(card: "Minion", board_tribes: Counter[str]) -> CardScore:
+    matches_tribe = card.tribe != Tribe.NEUTRAL and board_tribes.get(card.tribe, 0) > 0
+    return CardScore(
+        tribe_bonus=1 if matches_tribe else 0,
+        stats=card.attack + card.health,
+        tier_neg=-card.tier,
     )
 
 
 def _should_freeze_for_shop(player: "PlayerState") -> bool:
     board_tribes = _tribe_counts(player.board)
     return any(
-        card is not None
-        and (
-            card.attack + card.health >= 6
-            or (card.tribe != Tribe.NEUTRAL and board_tribes.get(card.tribe, 0) > 0)
+        c is not None and (
+            c.attack + c.health >= 6
+            or (c.tribe != Tribe.NEUTRAL and board_tribes.get(c.tribe, 0) > 0)
         )
-        for card in player.shop
+        for c in player.shop
     )
 
 
 def _tribe_counts(cards: list["Minion"]) -> Counter[str]:
-    return Counter(card.tribe for card in cards if card.tribe != Tribe.NEUTRAL)
+    return Counter(c.tribe for c in cards if c.tribe != Tribe.NEUTRAL)

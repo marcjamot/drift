@@ -9,7 +9,7 @@ def summon_imp(minion: Minion, event: DamageEvent, ctx: CombatContext) -> None:
         return
     if event.amount <= 0:
         return
-    ctx.summon("imp")
+    ctx.summon("imp", after=minion)
 
 
 CARD = CardDef(

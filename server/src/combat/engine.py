@@ -4,9 +4,9 @@ Deterministic combat engine.
 resolve_combat() takes deep copies of both boards and returns a full result
 dict including every event in order — no mutation of live PlayerState occurs here.
 """
+from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 from ..cards.base import (
@@ -18,186 +18,17 @@ from ..cards.base import (
     Hook,
     KillEvent,
     Minion,
-    SpawnEvent,
     TargetEvent,
     TriggerCtx,
 )
 from ..heroes.base import HeroDef
 from ..player import BOARD_SIZE
+from .context import CombatContext, CombatEvent
 
-CombatEvent = dict[str, Any]
 CombatResult = dict[str, Any]
 
 
-def _combat_instance_id(boards: List[List[Minion]], events: List[CombatEvent], side: int) -> str:
-    existing = {
-        minion.instance_id
-        for board in boards
-        for minion in board
-    }
-    index = len(events)
-    while True:
-        instance_id = f"c{side}{index:06x}"
-        if instance_id not in existing:
-            return instance_id
-        index += 1
-
-
-@dataclass
-class CombatContext:
-    friendly_board: List[Minion]
-    enemy_board: List[Minion]
-    events: List[CombatEvent]
-    rng: random.Random = field(default_factory=random.Random)
-    friendly_side: int = 0
-
-    def deal_damage(self, minion: Minion, amount: int) -> int:
-        actual = minion.take_damage(amount)
-        self.events.append(
-            {
-                "type": "damage",
-                "target_id": minion.instance_id,
-                "target_name": minion.name,
-                "amount": actual,
-                "remaining_health": minion.health,
-                "remaining_divine_shield": minion.divine_shield,
-            }
-        )
-        return actual
-
-    def buff(self, minion: Minion, attack: int = 0, health: int = 0) -> None:
-        minion.attack = max(0, minion.attack + attack)
-        minion.health += health
-        minion.max_health += health
-        self.events.append(
-            {
-                "type": "buff",
-                "target_id": minion.instance_id,
-                "target_name": minion.name,
-                "attack": attack,
-                "health": health,
-            }
-        )
-
-    def summon(self, card_id: str, to_enemy: bool = False) -> Optional[Minion]:
-        from ..cards.catalog import CARD_CATALOG
-
-        board: List[Minion] = self.enemy_board if to_enemy else self.friendly_board
-        if len(board) < BOARD_SIZE and card_id in CARD_CATALOG:
-            m: Minion = CARD_CATALOG[card_id].create_instance()
-            boards = (
-                [self.friendly_board, self.enemy_board]
-                if self.friendly_side == 0
-                else [self.enemy_board, self.friendly_board]
-            )
-            board.append(m)
-            target_side: int = (1 - self.friendly_side) if to_enemy else self.friendly_side
-            m.instance_id = _combat_instance_id(boards, self.events, target_side)
-            self.events.append(
-                {
-                    "type": "summon",
-                    "card_id": card_id,
-                    "minion": m.to_dict(),
-                    "side": target_side,
-                    "to_enemy": to_enemy,
-                }
-            )
-            _dispatch_hooks(
-                boards,
-                self.events,
-                "on_spawn",
-                SpawnEvent(subject=m, source="summon", subject_side=target_side),
-                self.rng,
-                subject=m,
-            )
-            return m
-        return None
-
-    def summon_copy(self, minion: Minion, to_enemy: bool = False) -> Optional[Minion]:
-        board: List[Minion] = self.enemy_board if to_enemy else self.friendly_board
-        if len(board) >= BOARD_SIZE:
-            return None
-        m = minion.copy()
-        boards = (
-            [self.friendly_board, self.enemy_board]
-            if self.friendly_side == 0
-            else [self.enemy_board, self.friendly_board]
-        )
-        board.append(m)
-        target_side: int = (1 - self.friendly_side) if to_enemy else self.friendly_side
-        m.instance_id = _combat_instance_id(boards, self.events, target_side)
-        self.events.append(
-            {
-                "type": "summon",
-                "card_id": m.card_id,
-                "minion": m.to_dict(),
-                "side": target_side,
-                "to_enemy": to_enemy,
-            }
-        )
-        _dispatch_hooks(
-            boards,
-            self.events,
-            "on_spawn",
-            SpawnEvent(subject=m, source="summon", subject_side=target_side),
-            self.rng,
-            subject=m,
-        )
-        return m
-
-    def add_keyword(self, minion: Minion, keyword: str) -> None:
-        minion.keywords.add(keyword)
-        self.events.append(
-            {
-                "type": "keyword_added",
-                "target_id": minion.instance_id,
-                "keyword": keyword,
-            }
-        )
-
-    def is_self(self, observer: Minion, subject: Minion | None) -> bool:
-        return subject is not None and observer.instance_id == subject.instance_id
-
-    def is_other(self, observer: Minion, subject: Minion | None) -> bool:
-        return subject is not None and observer.instance_id != subject.instance_id
-
-    def is_friendly(
-        self,
-        observer: Minion,
-        subject: Minion | None,
-        subject_side: int | None = None,
-    ) -> bool:
-        if subject is None:
-            return False
-        observer_side: int | None = self.side_of(observer)
-        if observer_side is None:
-            return False
-        if subject_side is None:
-            subject_side = self.side_of(subject)
-        return subject_side == observer_side
-
-    def is_enemy(
-        self,
-        observer: Minion,
-        subject: Minion | None,
-        subject_side: int | None = None,
-    ) -> bool:
-        if subject is None:
-            return False
-        observer_side: int | None = self.side_of(observer)
-        if observer_side is None:
-            return False
-        if subject_side is None:
-            subject_side = self.side_of(subject)
-        return subject_side is not None and subject_side != observer_side
-
-    def side_of(self, minion: Minion) -> int | None:
-        if any(member.instance_id == minion.instance_id for member in self.friendly_board):
-            return self.friendly_side
-        if any(member.instance_id == minion.instance_id for member in self.enemy_board):
-            return 1 - self.friendly_side
-        return None
-
+# ── hook dispatch ─────────────────────────────────────────────────────────────
 
 def _dispatch_hooks(
     boards: List[List[Minion]],
@@ -245,13 +76,11 @@ def _dispatch_hooks(
             friendly_side=side,
         )
 
-    # 1. start — all cards vote on count and multiplier.
     tctx = TriggerCtx()
     for side, minion, hook in entries:
         if hook.start:
             hook.start(minion, event, _ctx(side), tctx)
 
-    # 2/3/4. before / fn / after — repeated count * multiplier times.
     for _ in range(tctx.total):
         for side, minion, hook in entries:
             if hook.before:
@@ -268,7 +97,6 @@ def _dispatch_hooks(
             if hook.after:
                 hook.after(minion, event, _ctx(side))
 
-    # 5. end — all cards, once after all runs.
     for side, minion, hook in entries:
         if hook.end:
             hook.end(minion, event, _ctx(side))
@@ -284,10 +112,8 @@ def _dispatch_hero_hooks(
 ) -> None:
     """Fire a hero hook for the appropriate side(s).
 
-    subject_side — if set, only fires the hero on that side (e.g. on_kill
-                   fires for the killer's side; on_death for the dead
-                   minion's side).  If None, fires both heroes (e.g.
-                   on_combat_start affects every player).
+    subject_side — if set, only fires the hero on that side (e.g. on_kill fires
+                   for the killer's side). If None, fires both heroes.
     """
     for side, hero in enumerate(heroes):
         if hero is None:
@@ -306,11 +132,13 @@ def _dispatch_hero_hooks(
         fn(event, ctx)
 
 
-def _choose_target(defending_board: List[Minion], rng: random.Random) -> Optional[Minion]:
-    taunts: List[Minion] = [m for m in defending_board if m.is_alive() and "taunt" in m.keywords]
+# ── targeting and attacker selection ─────────────────────────────────────────
+
+def _choose_target(board: List[Minion], rng: random.Random) -> Optional[Minion]:
+    taunts = [m for m in board if m.is_alive() and "taunt" in m.keywords]
     if taunts:
         return rng.choice(taunts)
-    alive: List[Minion] = [m for m in defending_board if m.is_alive()]
+    alive = [m for m in board if m.is_alive()]
     return rng.choice(alive) if alive else None
 
 
@@ -333,8 +161,10 @@ def _advance_attacker_idx(board: List[Minion], previous_idx: int, attacker_id: s
     return previous_idx % len(board)
 
 
+# ── damage and kill dispatch ──────────────────────────────────────────────────
+
 def _deal_combat_damage(source: Minion, target: Minion, amount: int) -> int:
-    damage: int = target.take_damage(amount)
+    damage = target.take_damage(amount)
     if damage > 0 and "poisonous" in source.keywords:
         target.health = 0
     return damage
@@ -352,12 +182,9 @@ def _dispatch_damage(
     amount: int,
 ) -> None:
     damage_event = DamageEvent(
-        subject=subject,
-        subject_side=subject_side,
-        actor=actor,
-        actor_side=actor_side,
-        target=subject,
-        target_side=subject_side,
+        subject=subject, subject_side=subject_side,
+        actor=actor, actor_side=actor_side,
+        target=subject, target_side=subject_side,
         amount=amount,
     )
     _dispatch_hooks(boards, events, "on_damage", damage_event, rng, subject=subject)
@@ -375,16 +202,15 @@ def _dispatch_kill(
     target_side: int,
 ) -> None:
     kill_event = KillEvent(
-        actor=killer,
-        actor_side=killer_side,
-        target=target,
-        target_side=target_side,
-        subject=killer,
-        subject_side=killer_side,
+        actor=killer, actor_side=killer_side,
+        target=target, target_side=target_side,
+        subject=killer, subject_side=killer_side,
     )
     _dispatch_hooks(boards, events, "on_kill", kill_event, rng, subject=killer)
     _dispatch_hero_hooks(boards, events, "on_kill", kill_event, heroes, subject_side=killer_side)
 
+
+# ── death resolution ──────────────────────────────────────────────────────────
 
 def _resolve_deaths(
     boards: List[List[Minion]],
@@ -395,32 +221,25 @@ def _resolve_deaths(
     killer_side: int | None = None,
 ) -> None:
     while True:
-        resolved_any: bool = False
-
+        resolved_any = False
         for side in range(2):
-            board: List[Minion] = boards[side]
-            dead: List[Minion] = [m for m in list(board) if not m.is_alive()]
-
+            board = boards[side]
+            dead = [m for m in list(board) if not m.is_alive()]
             for corpse in dead:
                 if corpse not in board:
                     continue
                 corpse_idx = board.index(corpse)
                 resolved_any = True
-                events.append(
-                    {
-                        "type": "death",
-                        "minion_id": corpse.instance_id,
-                        "minion_name": corpse.name,
-                        "player_idx": side,
-                    }
-                )
+                events.append({
+                    "type": "death",
+                    "minion_id": corpse.instance_id,
+                    "minion_name": corpse.name,
+                    "player_idx": side,
+                })
                 death_event = DeathEvent(
-                    subject=corpse,
-                    subject_side=side,
-                    actor=killer,
-                    actor_side=killer_side,
-                    killer=killer,
-                    killer_side=killer_side,
+                    subject=corpse, subject_side=side,
+                    actor=killer, actor_side=killer_side,
+                    killer=killer, killer_side=killer_side,
                 )
                 _dispatch_hooks(boards, events, "on_death", death_event, rng, subject=corpse)
                 _dispatch_hero_hooks(boards, events, "on_death", death_event, heroes, subject_side=side)
@@ -431,20 +250,19 @@ def _resolve_deaths(
                     reborn.health = 1
                     reborn.keywords.discard("reborn")
                     board.insert(min(corpse_idx, len(board)), reborn)
-                    events.append(
-                        {
-                            "type": "reborn_trigger",
-                            "minion_id": reborn.instance_id,
-                            "minion_name": reborn.name,
-                            "player_idx": side,
-                            "position": min(corpse_idx, len(board) - 1),
-                            "minion": reborn.to_dict(),
-                        }
-                    )
-
+                    events.append({
+                        "type": "reborn_trigger",
+                        "minion_id": reborn.instance_id,
+                        "minion_name": reborn.name,
+                        "player_idx": side,
+                        "position": min(corpse_idx, len(board) - 1),
+                        "minion": reborn.to_dict(),
+                    })
         if not resolved_any:
             break
 
+
+# ── main entry point ──────────────────────────────────────────────────────────
 
 def resolve_combat(
     board_a: List[Minion],
@@ -467,11 +285,12 @@ def resolve_combat(
     _dispatch_hero_hooks(boards, events, "on_combat_start", combat_start, heroes)
 
     if len(boards[0]) > len(boards[1]):
-        current: int = 0
+        current = 0
     elif len(boards[1]) > len(boards[0]):
         current = 1
     else:
         current = rng.choice([0, 1])
+
     next_attacker_idx: List[int] = [0, 0]
     windfury_pending: set[str] = set()
 
@@ -495,17 +314,15 @@ def resolve_combat(
         _dispatch_hooks(boards, events, "on_target", target_event, rng, subject=attacker)
         _dispatch_hero_hooks(boards, events, "on_target", target_event, heroes, subject_side=current)
 
-        events.append(
-            {
-                "type": "attack",
-                "attacker_id": attacker.instance_id,
-                "attacker_name": attacker.name,
-                "attacker_attack": attacker.attack,
-                "defender_id": defender.instance_id,
-                "defender_name": defender.name,
-                "defender_attack": defender.attack,
-            }
-        )
+        events.append({
+            "type": "attack",
+            "attacker_id": attacker.instance_id,
+            "attacker_name": attacker.name,
+            "attacker_attack": attacker.attack,
+            "defender_id": defender.instance_id,
+            "defender_name": defender.name,
+            "defender_attack": defender.attack,
+        })
 
         attack_event = AttackEvent(
             actor=attacker, actor_side=current,
@@ -519,12 +336,12 @@ def resolve_combat(
         if "cleave" in attacker.keywords and defender_idx >= 0:
             for idx in (defender_idx - 1, defender_idx + 1):
                 if 0 <= idx < len(boards[1 - current]):
-                    target = boards[1 - current][idx]
-                    if target.is_alive():
-                        cleave_targets.append(target)
+                    t = boards[1 - current][idx]
+                    if t.is_alive():
+                        cleave_targets.append(t)
 
-        damage_to_attacker: int = _deal_combat_damage(defender, attacker, defender.attack)
-        damage_to_defender: int = _deal_combat_damage(attacker, defender, attacker.attack)
+        damage_to_attacker = _deal_combat_damage(defender, attacker, defender.attack)
+        damage_to_defender = _deal_combat_damage(attacker, defender, attacker.attack)
 
         _dispatch_damage(boards, events, heroes, rng, attacker, current, defender, 1 - current, damage_to_attacker)
         _dispatch_damage(boards, events, heroes, rng, defender, 1 - current, attacker, current, damage_to_defender)
@@ -534,65 +351,56 @@ def resolve_combat(
         if damage_to_attacker > 0 and not attacker.is_alive():
             _dispatch_kill(boards, events, heroes, rng, defender, 1 - current, attacker, current)
 
-        events.append(
-            {
-                "type": "damage_dealt",
-                "attacker_id": attacker.instance_id,
-                "attacker_remaining_hp": attacker.health,
-                "attacker_divine_shield": attacker.divine_shield,
-                "damage_to_attacker": damage_to_attacker,
-                "defender_id": defender.instance_id,
-                "defender_remaining_hp": defender.health,
-                "defender_divine_shield": defender.divine_shield,
-                "damage_to_defender": damage_to_defender,
-            }
-        )
+        events.append({
+            "type": "damage_dealt",
+            "attacker_id": attacker.instance_id,
+            "attacker_remaining_hp": attacker.health,
+            "attacker_divine_shield": attacker.divine_shield,
+            "damage_to_attacker": damage_to_attacker,
+            "defender_id": defender.instance_id,
+            "defender_remaining_hp": defender.health,
+            "defender_divine_shield": defender.divine_shield,
+            "damage_to_defender": damage_to_defender,
+        })
 
-        for splash_target in cleave_targets:
-            if splash_target not in boards[1 - current] or not splash_target.is_alive():
+        for splash in cleave_targets:
+            if splash not in boards[1 - current] or not splash.is_alive():
                 continue
-            splash_damage = _deal_combat_damage(attacker, splash_target, attacker.attack)
-            _dispatch_damage(boards, events, heroes, rng, splash_target, 1 - current, attacker, current, splash_damage)
-            if splash_damage > 0 and not splash_target.is_alive():
-                _dispatch_kill(boards, events, heroes, rng, attacker, current, splash_target, 1 - current)
-            events.append(
-                {
-                    "type": "cleave_splash",
-                    "attacker_id": attacker.instance_id,
-                    "attacker_name": attacker.name,
-                    "target_id": splash_target.instance_id,
-                    "target_name": splash_target.name,
-                    "amount": splash_damage,
-                    "remaining_health": splash_target.health,
-                    "remaining_divine_shield": splash_target.divine_shield,
-                }
-            )
+            splash_damage = _deal_combat_damage(attacker, splash, attacker.attack)
+            _dispatch_damage(boards, events, heroes, rng, splash, 1 - current, attacker, current, splash_damage)
+            if splash_damage > 0 and not splash.is_alive():
+                _dispatch_kill(boards, events, heroes, rng, attacker, current, splash, 1 - current)
+            events.append({
+                "type": "cleave_splash",
+                "attacker_id": attacker.instance_id,
+                "attacker_name": attacker.name,
+                "target_id": splash.instance_id,
+                "target_name": splash.name,
+                "amount": splash_damage,
+                "remaining_health": splash.health,
+                "remaining_divine_shield": splash.divine_shield,
+            })
 
         _resolve_deaths(boards, events, heroes, rng, killer=attacker, killer_side=current)
+
         attacker_alive = any(
-            minion.instance_id == attacker.instance_id and minion.is_alive()
-            for minion in boards[current]
+            m.instance_id == attacker.instance_id and m.is_alive()
+            for m in boards[current]
         )
-        if (
-            attacker_alive
-            and "windfury" in attacker.keywords
-            and attacker.instance_id not in windfury_pending
-        ):
+        if attacker_alive and "windfury" in attacker.keywords and attacker.instance_id not in windfury_pending:
             windfury_pending.add(attacker.instance_id)
             continue
 
         windfury_pending.discard(attacker.instance_id)
-        next_attacker_idx[current] = _advance_attacker_idx(
-            boards[current], attacker_idx, attacker.instance_id
-        )
+        next_attacker_idx[current] = _advance_attacker_idx(boards[current], attacker_idx, attacker.instance_id)
         current = 1 - current
 
-    a_alive: List[Minion] = [m for m in boards[0] if m.is_alive()]
-    b_alive: List[Minion] = [m for m in boards[1] if m.is_alive()]
+    a_alive = [m for m in boards[0] if m.is_alive()]
+    b_alive = [m for m in boards[1] if m.is_alive()]
 
     if a_alive and not b_alive:
         winner: Optional[int] = 0
-        damage: int = tavern_tier_a + sum(m.tier for m in a_alive)
+        damage = tavern_tier_a + sum(m.tier for m in a_alive)
     elif b_alive and not a_alive:
         winner = 1
         damage = tavern_tier_b + sum(m.tier for m in b_alive)

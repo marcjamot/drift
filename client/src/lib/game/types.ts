@@ -136,6 +136,7 @@ export type CombatEvent =
 			minion: MinionSnapshot;
 			side: number;
 			to_enemy: boolean;
+			position: number;
 	  }
 	| {
 			type: "keyword_added";
@@ -148,6 +149,8 @@ export interface CombatMeta {
 	is_ghost: boolean;
 	initial_a: MinionSnapshot[];
 	initial_b: MinionSnapshot[];
+	pre_health: Record<string, number>;
+	pre_armor: Record<string, number>;
 }
 
 export interface CombatResultMsg {

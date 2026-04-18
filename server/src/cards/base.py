@@ -20,16 +20,25 @@ class Tribe:
     NEUTRAL = "neutral"
 
 
-TRIBES = {
-    Tribe.BEAST,
-    Tribe.MECH,
-    Tribe.DEMON,
-    Tribe.MURLOC,
-    Tribe.PIRATE,
-    Tribe.DRAGON,
-    Tribe.UNDEAD,
-    Tribe.NEUTRAL,
-}
+TRIBES: frozenset[str] = frozenset({
+    Tribe.BEAST, Tribe.MECH, Tribe.DEMON, Tribe.MURLOC,
+    Tribe.PIRATE, Tribe.DRAGON, Tribe.UNDEAD, Tribe.NEUTRAL,
+})
+
+
+class Keyword:
+    TAUNT = "taunt"
+    DIVINE_SHIELD = "divine_shield"
+    POISONOUS = "poisonous"
+    WINDFURY = "windfury"
+    CLEAVE = "cleave"
+    REBORN = "reborn"
+
+
+KEYWORDS: frozenset[str] = frozenset({
+    Keyword.TAUNT, Keyword.DIVINE_SHIELD, Keyword.POISONOUS,
+    Keyword.WINDFURY, Keyword.CLEAVE, Keyword.REBORN,
+})
 
 
 @dataclass(slots=True)
@@ -254,10 +263,13 @@ class CardDef:
     ))
 
     def __post_init__(self) -> None:
-        for name in self._HOOK_FIELDS:
-            val = getattr(self, name)
+        for hook_name in self._HOOK_FIELDS:
+            val = getattr(self, hook_name)
             if callable(val) and not isinstance(val, Hook):
-                setattr(self, name, Hook(fn=val))
+                setattr(self, hook_name, Hook(fn=val))
+        unknown = set(self.keywords) - KEYWORDS
+        if unknown:
+            raise ValueError(f"CardDef {self.id!r} has unknown keywords: {unknown}")
 
     def create_instance(self) -> Minion:
         return Minion(

@@ -1,7 +1,6 @@
 """Shared test helpers. Imported automatically by pytest for every test module."""
 import random
 
-import pytest
 
 from src.cards.base import Minion
 from src.cards.catalog import CARD_CATALOG, SHOP_CARDS
@@ -9,7 +8,14 @@ from src.cards.pool import CardPool
 from src.player.player import PlayerState
 
 
-def bare(attack: int, health: int, tier: int = 1, **kwargs) -> Minion:
+def bare(
+    attack: int,
+    health: int,
+    tier: int = 1,
+    tribe: str = "neutral",
+    keywords: set | None = None,
+    **kwargs,
+) -> Minion:
     """Minimal minion with no card effects (card_id absent from catalog)."""
     return Minion(
         card_id="__test__",
@@ -19,6 +25,8 @@ def bare(attack: int, health: int, tier: int = 1, **kwargs) -> Minion:
         health=health,
         max_health=health,
         tier=tier,
+        tribe=tribe,
+        keywords=keywords if keywords is not None else set(),
         **kwargs,
     )
 
