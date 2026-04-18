@@ -159,10 +159,19 @@ export interface CombatResultMsg {
 	opponent_is_ghost: boolean;
 }
 
+export interface QueuedMsg {
+	type: "queued";
+	queued_count: number;
+	total_slots: number;
+	seconds_left: number;
+	can_skip_wait: boolean;
+}
+
 export type Intent =
 	| { type: "login"; name: string }
 	| { type: "reconnect"; player_id: string }
 	| { type: "queue" }
+	| { type: "queue_now" }
 	| { type: "hero_pick"; index: number }
 	| { type: "use_hero_power" }
 	| { type: "use_hero_power"; target_zone: "shop" | "hand"; target_index: number }

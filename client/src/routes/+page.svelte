@@ -15,6 +15,10 @@
 	function restart() {
 		ui.screen = "login";
 		ui.gameOverWinner = null;
+		ui.queuedCount = 0;
+		ui.totalSlots = 8;
+		ui.queueSecondsLeft = null;
+		ui.canSkipQueueWait = false;
 		match.self = null;
 		match.opponent = null;
 		match.round = 0;
