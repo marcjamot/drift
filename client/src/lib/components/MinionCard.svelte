@@ -76,7 +76,7 @@
 		</div>
 	{/if}
 	<div class="name">{minion.name}</div>
-	<div class="tribe">{minion.tribe}</div>
+	<div class={`tribe tribe-${minion.tribe}`}>{minion.tribe}</div>
 	<div class="keywords">
 		{#each minion.keywords as kw (kw)}
 			<span class="keyword">{kw}</span>
@@ -322,6 +322,31 @@
 		color: #8f98a8;
 		text-transform: uppercase;
 		letter-spacing: 0;
+		font-weight: 800;
+	}
+	.tribe-beast {
+		color: #70d05e;
+	}
+	.tribe-mech {
+		color: #9ea9b8;
+	}
+	.tribe-demon {
+		color: #e05a76;
+	}
+	.tribe-murloc {
+		color: #43c7c5;
+	}
+	.tribe-pirate {
+		color: #f0c14d;
+	}
+	.tribe-dragon {
+		color: #d986ff;
+	}
+	.tribe-undead {
+		color: #b7dbff;
+	}
+	.tribe-neutral {
+		color: #c8c1ac;
 	}
 	.minion-card.size-small .tribe {
 		font-size: 8px;
