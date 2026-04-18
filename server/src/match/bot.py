@@ -15,13 +15,16 @@ from . import actions
 
 def run_bot_buy_phase(player: "PlayerState", match: "Match") -> None:
     if player.gold < 1:
+        actions.auto_pick_discovers(player, match.pool, match.rng)
         actions.lock(player)
         return
 
     if player.tavern_tier < 4 and player.upgrade_cost <= player.gold * 0.4:
         actions.upgrade(player, match.round)
+        actions.auto_pick_discovers(player, match.pool, match.rng)
 
     _play_best_hand_cards(player, match)
+    actions.auto_pick_discovers(player, match.pool, match.rng)
 
     while player.gold >= BUY_COST and len(player.board) < BOARD_SIZE:
         shop_index = _best_shop_index(player)
@@ -31,7 +34,9 @@ def run_bot_buy_phase(player: "PlayerState", match: "Match") -> None:
         result = actions.buy(player, shop_index, match.pool, match.rng)
         if "error" in result:
             break
+        actions.auto_pick_discovers(player, match.pool, match.rng)
         _play_best_hand_cards(player, match)
+        actions.auto_pick_discovers(player, match.pool, match.rng)
 
     if player.gold == 1 and _should_freeze_for_shop(player) and not player.frozen:
         actions.freeze(player)

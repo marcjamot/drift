@@ -77,21 +77,23 @@ class BuyPhase(Phase):
 
         kind = action.get("type")
 
+        result: ActionResult
+
         if kind == "buy":
-            return actions.buy(player, action.get("shop_index"), match.pool, match.rng)
-        if kind == "play":
-            return actions.play(player, action.get("hand_index"), match.pool, match.rng)
-        if kind == "sell":
-            return actions.sell(player, action.get("board_index"), match.pool, match.rng)
-        if kind == "reorder":
-            return actions.reorder(player, action.get("from_index"), action.get("to_index"))
-        if kind == "freeze":
-            return actions.freeze(player)
-        if kind == "refresh":
-            return actions.refresh(player, match.pool)
-        if kind == "upgrade":
-            return actions.upgrade(player, match.round)
-        if kind == "lock":
+            result = actions.buy(player, action.get("shop_index"), match.pool, match.rng)
+        elif kind == "play":
+            result = actions.play(player, action.get("hand_index"), match.pool, match.rng)
+        elif kind == "sell":
+            result = actions.sell(player, action.get("board_index"), match.pool, match.rng)
+        elif kind == "reorder":
+            result = actions.reorder(player, action.get("from_index"), action.get("to_index"))
+        elif kind == "freeze":
+            result = actions.freeze(player)
+        elif kind == "refresh":
+            result = actions.refresh(player, match.pool)
+        elif kind == "upgrade":
+            result = actions.upgrade(player, match.round)
+        elif kind == "lock":
             result = actions.lock(player)
             if result.get("ok"):
                 alive_humans = [
@@ -100,12 +102,16 @@ class BuyPhase(Phase):
                 ]
                 if all(p.locked for p in alive_humans):
                     match._phase_end.set()
-            return result
-        if kind == "discover_pick":
-            return actions.discover_pick(
+        elif kind == "discover_pick":
+            result = actions.discover_pick(
                 player, action.get("index"), match.pool, match.rng
             )
-        if kind == "use_hero_power":
-            return actions.use_hero_power(player, action, match.rng)
+        elif kind == "use_hero_power":
+            result = actions.use_hero_power(player, action, match.rng)
+        else:
+            return {"error": f"unknown action: {kind!r}"}
 
-        return {"error": f"unknown action: {kind!r}"}
+        if result.get("ok") and player.is_bot:
+            actions.auto_pick_discovers(player, match.pool, match.rng)
+
+        return result
