@@ -5,6 +5,7 @@
 	import ShopView from "./shop/ShopView.svelte";
 	import CombatView from "./combat/CombatView.svelte";
 	import LeaderboardPanel from "./LeaderboardPanel.svelte";
+	import OverlayHost from "$lib/components/OverlayHost.svelte";
 
 	let concedeArmed = $state(false);
 	let concedeTimer = 0;
@@ -43,17 +44,19 @@
 </script>
 
 {#if match.self}
-	<div class="game-shell" class:combat-mode={match.phase === "combat"} class:buy-mode={match.phase === "buy"}>
+	<div class="game-shell" class:combat-mode={match.phase === "combat"} class:buy-mode={match.phase === "shop"}>
 		<header class="topbar">
 			<div class="identity">
 				<div class="nameplate">{match.self.name}</div>
 				<div class="round-chip">Round {match.round}</div>
 				<div class="health-chip" class:low={match.self.health <= 15}>
-					♥ {match.self.health}{#if match.self.armor > 0} / 🛡 {match.self.armor}{/if}
+					♥ {match.self.health}{#if match.self.armor > 0}
+						/ 🛡 {match.self.armor}{/if}
 				</div>
 				{#if match.opponent}
 					<div class="health-chip enemy" class:low={match.opponent.health <= 15}>
-						vs {match.opponent.name} · ♥ {match.opponent.health}{#if match.opponent.armor > 0} / 🛡 {match.opponent.armor}{/if}
+						vs {match.opponent.name} · ♥ {match.opponent.health}{#if match.opponent.armor > 0}
+							/ 🛡 {match.opponent.armor}{/if}
 					</div>
 					{#if match.opponent.hero}
 						<div class="hero-chip enemy-hero" title={match.opponent.hero.description}>
@@ -65,7 +68,7 @@
 				{/if}
 			</div>
 
-			{#if !showCombat && match.phase === "buy"}
+			{#if !showCombat && match.phase === "shop"}
 				<div class="controls">
 					<span class="turn-timer" class:urgent={(match.buySecondsLeft ?? 99) <= 10}>
 						{match.buySecondsLeft ?? 0}s
@@ -84,14 +87,10 @@
 			{/if}
 		</header>
 
-		{#if !showCombat && match.phase === "buy" && (match.buySecondsLeft ?? 99) <= 20}
+		{#if !showCombat && match.phase === "shop" && (match.buySecondsLeft ?? 99) <= 20}
 			{@const pct = ((match.buySecondsLeft ?? 0) / 20) * 100}
 			<div class="countdown-bar-track">
-				<div
-					class="countdown-bar"
-					class:low={pct < 40}
-					style="width:{pct}%"
-				></div>
+				<div class="countdown-bar" class:low={pct < 40} style="width:{pct}%"></div>
 			</div>
 		{/if}
 
@@ -99,7 +98,7 @@
 			<LeaderboardPanel />
 
 			<div class="game-main">
-				{#if !showCombat && match.phase === "buy"}
+				{#if !showCombat && match.phase === "shop"}
 					<ShopView {healthFlash} />
 				{:else}
 					<CombatView {healthFlash} />
@@ -107,6 +106,7 @@
 			</div>
 		</div>
 	</div>
+	<OverlayHost />
 {/if}
 
 <style>
@@ -119,8 +119,7 @@
 		overflow: hidden;
 	}
 	.game-shell.combat-mode {
-		background: radial-gradient(circle at center, #2b2320 0%, transparent 32%),
-			linear-gradient(180deg, #140f0d 0%, #090b0f 100%);
+		background: radial-gradient(circle at center, #2b2320 0%, transparent 32%), linear-gradient(180deg, #140f0d 0%, #090b0f 100%);
 	}
 
 	.topbar {
@@ -175,7 +174,9 @@
 		font-weight: 600;
 		cursor: default;
 		white-space: nowrap;
-		transition: border-color 0.15s, background 0.15s;
+		transition:
+			border-color 0.15s,
+			background 0.15s;
 	}
 	.hero-chip:hover {
 		border-color: #8fa8c8;
@@ -209,8 +210,13 @@
 		animation: timer-pulse 0.75s ease-in-out infinite;
 	}
 	@keyframes timer-pulse {
-		0%, 100% { box-shadow: none; }
-		50% { box-shadow: 0 0 14px 3px #c7747455; }
+		0%,
+		100% {
+			box-shadow: none;
+		}
+		50% {
+			box-shadow: 0 0 14px 3px #c7747455;
+		}
 	}
 
 	.countdown-bar-track {
@@ -224,13 +230,19 @@
 		animation: bar-track-in 0.4s ease-out both;
 	}
 	@keyframes bar-track-in {
-		from { opacity: 0; }
-		to { opacity: 1; }
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 	.countdown-bar {
 		height: 100%;
 		background: linear-gradient(90deg, #4b8a5a, #71c186);
-		transition: width 1s linear, background 0.4s ease;
+		transition:
+			width 1s linear,
+			background 0.4s ease;
 		border-radius: 0 3px 3px 0;
 	}
 	.countdown-bar.low {
@@ -238,8 +250,13 @@
 		animation: bar-pulse 0.6s ease-in-out infinite;
 	}
 	@keyframes bar-pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.55; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.55;
+		}
 	}
 
 	.game-body {

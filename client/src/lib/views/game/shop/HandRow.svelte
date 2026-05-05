@@ -12,7 +12,15 @@
 		ontargetselect?: (index: number) => void;
 	}
 
-	let { hand, cardsDraggable = false, oncarddragstart, oncarddragend, ghostSourceIds = new Set<string>(), targeting = false, ontargetselect }: Props = $props();
+	let {
+		hand,
+		cardsDraggable = false,
+		oncarddragstart,
+		oncarddragend,
+		ghostSourceIds = new Set<string>(),
+		targeting = false,
+		ontargetselect,
+	}: Props = $props();
 </script>
 
 <div class="section-head">
@@ -41,12 +49,18 @@
 	.hand-wrap.targeting :global(.card-slot) {
 		cursor: pointer;
 		border-radius: 16px;
-		box-shadow: 0 0 0 2px #7ab0e088, 0 0 16px 4px #3a6ab033;
+		box-shadow:
+			0 0 0 2px #7ab0e088,
+			0 0 16px 4px #3a6ab033;
 		transform: translateY(-2px);
-		transition: box-shadow 0.15s, transform 0.15s;
+		transition:
+			box-shadow 0.15s,
+			transform 0.15s;
 	}
 	.hand-wrap.targeting :global(.card-slot:hover) {
-		box-shadow: 0 0 0 2px #a8d4ff, 0 0 24px 6px #5a8abf44;
+		box-shadow:
+			0 0 0 2px #a8d4ff,
+			0 0 24px 6px #5a8abf44;
 		transform: translateY(-4px);
 	}
 	.section-head {

@@ -1,8 +1,4 @@
-export type HeroPowerType =
-	| "passive"
-	| "active_click"
-	| "active_target_shop"
-	| "active_target_hand";
+export type HeroPowerType = "passive" | "active_click" | "active_target_shop" | "active_target_hand";
 
 export interface HeroSnapshot {
 	id: string;
@@ -21,9 +17,11 @@ export interface MinionSnapshot {
 	max_health: number;
 	tier: number;
 	tribe: string;
-	keywords: string[];
-	divine_shield: boolean;
+	components?: string[];
+	keywords?: string[];
+	divine_shield?: boolean;
 	golden: boolean;
+	memory: Record<string, string | number | boolean>;
 }
 
 export interface SelfSnapshot {
@@ -41,7 +39,7 @@ export interface SelfSnapshot {
 	max_gold: number;
 	frozen: boolean;
 	hero: HeroSnapshot | null;
-	hero_power_uses_left: number;  // 1 = available, 0 = spent
+	hero_power_uses_left: number; // 1 = available, 0 = spent
 	is_ghost: boolean;
 }
 
@@ -68,7 +66,7 @@ export interface LeaderboardEntry {
 	last_combat_board: MinionSnapshot[];
 }
 
-export type Phase = "buy" | "combat" | "game_over";
+export type Phase = "begin" | "hero_select" | "shop" | "combat" | "end" | "game_over";
 
 export type CombatEvent =
 	| {
@@ -81,14 +79,12 @@ export type CombatEvent =
 			defender_attack: number;
 	  }
 	| {
-			type: "damage_dealt";
+			type: "damage";
 			attacker_id: string;
 			attacker_remaining_hp: number;
-			attacker_divine_shield: boolean;
 			damage_to_attacker: number;
 			defender_id: string;
 			defender_remaining_hp: number;
-			defender_divine_shield: boolean;
 			damage_to_defender: number;
 	  }
 	| {
@@ -102,8 +98,14 @@ export type CombatEvent =
 	| {
 			type: "death";
 			minion_id: string;
-			minion_name: string;
+			minion_name?: string;
 			player_idx: number;
+	  }
+	| {
+			type: "spawn";
+			minion_id: string;
+			player_idx: number;
+			minion: MinionSnapshot;
 	  }
 	| {
 			type: "reborn_trigger";
@@ -122,13 +124,6 @@ export type CombatEvent =
 			amount: number;
 			remaining_health: number;
 			remaining_divine_shield: boolean;
-	  }
-	| {
-			type: "buff";
-			target_id: string;
-			target_name: string;
-			attack: number;
-			health: number;
 	  }
 	| {
 			type: "summon";

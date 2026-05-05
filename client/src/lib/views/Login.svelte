@@ -21,16 +21,8 @@
 				login();
 			}}
 		>
-			<input
-				class="name-input"
-				bind:value={nameInput}
-				placeholder="your name"
-				maxlength="20"
-				disabled={!connection.connected}
-			/>
-			<button type="submit" class="btn primary" disabled={!connection.connected || !nameInput.trim()}>
-				Continue
-			</button>
+			<input class="name-input" bind:value={nameInput} placeholder="your name" maxlength="20" disabled={!connection.connected} />
+			<button type="submit" class="btn primary" disabled={!connection.connected || !nameInput.trim()}> Continue </button>
 		</form>
 	{:else}
 		<p class="greeting">Hi, <strong>{connection.playerName}</strong></p>

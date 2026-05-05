@@ -21,7 +21,10 @@
 	<div class="arena-nameplate">
 		<span class="arena-kicker">You</span>
 		<span class="arena-name">{name}</span>
-		<span class="arena-hp" class:low={health <= 15}>♥ {health}{#if armor > 0} / 🛡 {armor}{/if}</span>
+		<span class="arena-hp" class:low={health <= 15}
+			>♥ {health}{#if armor > 0}
+				/ 🛡 {armor}{/if}</span
+		>
 	</div>
 </div>
 

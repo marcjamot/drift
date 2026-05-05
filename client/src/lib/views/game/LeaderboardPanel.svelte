@@ -21,12 +21,7 @@
 		{@const isSelf = entry.player_id === connection.playerId}
 		{@const isOpponent = isMyOpponent(entry)}
 		{@const isDead = entry.health <= 0}
-		<div
-			class="lb-row"
-			class:self={isSelf}
-			class:opponent={isOpponent && !isSelf}
-			class:dead={isDead}
-		>
+		<div class="lb-row" class:self={isSelf} class:opponent={isOpponent && !isSelf} class:dead={isDead}>
 			<div class="lb-rank">{ordinal(i + 1)}</div>
 			<div class="lb-info">
 				<div class="lb-name" title={entry.name}>
@@ -39,18 +34,15 @@
 					{#if isDead}
 						<span class="dead-label">eliminated</span>
 					{:else}
-						♥ {entry.health}{#if entry.armor > 0} / 🛡 {entry.armor}{/if}
+						♥ {entry.health}{#if entry.armor > 0}
+							/ 🛡 {entry.armor}{/if}
 					{/if}
 				</div>
 			</div>
 			{#if entry.last_combat_board.length > 0}
 				<div class="lb-board">
 					{#each entry.last_combat_board as minion (minion.instance_id)}
-						<div
-							class="lb-minion"
-							class:golden={minion.golden}
-							title="{minion.name} {minion.attack}/{minion.health}"
-						>
+						<div class="lb-minion" class:golden={minion.golden} title="{minion.name} {minion.attack}/{minion.health}">
 							<span class="lb-atk">{minion.attack}</span>
 							<span class="lb-hp-mini">{minion.health}</span>
 						</div>
