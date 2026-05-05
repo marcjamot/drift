@@ -58,8 +58,7 @@
 		padding: 0;
 	}
 	:global(body) {
-		background: radial-gradient(circle at top, #23303b 0%, transparent 34%),
-			linear-gradient(180deg, #10141a 0%, #090b0f 100%);
+		background: radial-gradient(circle at top, #23303b 0%, transparent 34%), linear-gradient(180deg, #10141a 0%, #090b0f 100%);
 		color: #f2eadc;
 		font-family: Georgia, "Times New Roman", serif;
 		font-size: 14px;

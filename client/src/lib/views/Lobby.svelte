@@ -11,9 +11,7 @@
 		<p class="timer">Filling with bots in {ui.queueSecondsLeft}s</p>
 	{/if}
 	{#if ui.canSkipQueueWait}
-		<button class="skip" type="button" onclick={() => send({ type: "queue_now" })}>
-			Play with bots now
-		</button>
+		<button class="skip" type="button" onclick={() => send({ type: "queue_now" })}> Play with bots now </button>
 	{/if}
 	<div class="dots"><span></span><span></span><span></span></div>
 </div>

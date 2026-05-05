@@ -52,13 +52,12 @@
 		runCombatAnim(log, isSelfA);
 	});
 
-	// After animation finishes and we're back in buy phase, hold the result
+	// After animation finishes and we're back in shop phase, hold the result
 	// briefly then clear combat data so GameView unmounts this view.
 	$effect(() => {
-		if (match.phase !== "buy") return;
+		if (match.phase !== "shop") return;
 		if (animPhase === "idle") return;
 		if (animPhase === "animating") return;
-		if (!combat.combatResult) return;
 		const resetTimer = setTimeout(() => {
 			animStarted = false;
 			animPhase = "idle";
@@ -90,19 +89,30 @@
 
 	function updateMinionState(id: string, hp: number, divineShield?: boolean) {
 		animSelfBoard = animSelfBoard.map((m) =>
-			m.instance_id === id ? { ...m, health: hp, divine_shield: divineShield ?? m.divine_shield } : m
+			m.instance_id === id
+				? {
+						...m,
+						health: hp,
+						divine_shield: divineShield ?? m.divine_shield,
+						memory: {
+							...m.memory,
+							divine_shield: divineShield ?? m.memory.divine_shield,
+						},
+					}
+				: m
 		);
 		animOppBoard = animOppBoard.map((m) =>
-			m.instance_id === id ? { ...m, health: hp, divine_shield: divineShield ?? m.divine_shield } : m
-		);
-	}
-
-	function updateMinionBuff(id: string, atk: number, hp: number) {
-		animSelfBoard = animSelfBoard.map((m) =>
-			m.instance_id === id ? { ...m, attack: m.attack + atk, health: m.health + hp } : m
-		);
-		animOppBoard = animOppBoard.map((m) =>
-			m.instance_id === id ? { ...m, attack: m.attack + atk, health: m.health + hp } : m
+			m.instance_id === id
+				? {
+						...m,
+						health: hp,
+						divine_shield: divineShield ?? m.divine_shield,
+						memory: {
+							...m.memory,
+							divine_shield: divineShield ?? m.memory.divine_shield,
+						},
+					}
+				: m
 		);
 	}
 
@@ -110,6 +120,22 @@
 		const withoutExisting = board.filter((m) => m.instance_id !== minion.instance_id);
 		const idx = Math.max(0, Math.min(position, withoutExisting.length));
 		return [...withoutExisting.slice(0, idx), minion, ...withoutExisting.slice(idx)];
+	}
+
+	function findAnimMinion(id: string): MinionSnapshot | undefined {
+		return [...animSelfBoard, ...animOppBoard].find((m) => m.instance_id === id);
+	}
+
+	function combatDamageSummary() {
+		const meta = combat.combatMeta;
+		if (!meta || !match.self || !match.opponent) return null;
+		const selfBefore = meta.pre_health[match.self.player_id] ?? match.self.health;
+		const opponentBefore = meta.pre_health[match.opponent.player_id] ?? match.opponent.health;
+		const selfDamage = Math.max(0, selfBefore - match.self.health);
+		const opponentDamage = Math.max(0, opponentBefore - match.opponent.health);
+		if (selfDamage === 0 && opponentDamage === 0) return { outcome: "tie", damage: 0 };
+		if (opponentDamage > selfDamage) return { outcome: "win", damage: opponentDamage };
+		return { outcome: "loss", damage: selfDamage };
 	}
 
 	function applyLunge(attackerId: string, defenderId: string) {
@@ -133,9 +159,7 @@
 		const y = cR.top - aR.top + 10;
 		const existing = dmgNumbers.find((n) => n.cardId === cardId);
 		if (existing) {
-			dmgNumbers = dmgNumbers.map((n) =>
-				n.cardId === cardId ? { ...n, value: n.value + value, x, y, enemy: isEnemyCard } : n
-			);
+			dmgNumbers = dmgNumbers.map((n) => (n.cardId === cardId ? { ...n, value: n.value + value, x, y, enemy: isEnemyCard } : n));
 		} else {
 			const id = ++dmgSeq;
 			dmgNumbers = [...dmgNumbers, { id, cardId, value, x, y, enemy: isEnemyCard }];
@@ -163,36 +187,36 @@
 				await sleep(16);
 				applyLunge(aid, did);
 				await sleep(300);
-			} else if (e.type === "damage_dealt") {
+			} else if (e.type === "damage" && "attacker_id" in e) {
 				const aid = e.attacker_id as string;
 				const did = e.defender_id as string;
 				const defDmg = e.damage_to_defender as number;
 				const attackerIsOpp = animOppBoard.some((m) => m.instance_id === aid);
 				if (defDmg > 0) spawnDmgNumber(did, defDmg, !attackerIsOpp);
-				if (defDmg >= 4) { animShake = true; setTimeout(() => (animShake = false), 380); }
+				if (defDmg >= 4) {
+					animShake = true;
+					setTimeout(() => (animShake = false), 380);
+				}
 				const atkDmg = e.damage_to_attacker as number;
 				animStricken = new Set([...(atkDmg > 0 ? [aid] : []), ...(defDmg > 0 ? [did] : [])]);
 				animImpact = new Set([did]);
 				animCardStyles = new Map();
 				animText = "✦ Impact";
-				updateMinionState(aid, e.attacker_remaining_hp as number, e.attacker_divine_shield as boolean | undefined);
-				updateMinionState(did, e.defender_remaining_hp as number, e.defender_divine_shield as boolean | undefined);
+				updateMinionState(aid, e.attacker_remaining_hp as number);
+				updateMinionState(did, e.defender_remaining_hp as number);
 				await sleep(180);
 				animImpact = new Set();
 				await sleep(500);
 				animStricken = new Set();
 			} else if (e.type === "death") {
 				const mid = e.minion_id as string;
+				const name = e.minion_name ?? findAnimMinion(mid)?.name ?? "A minion";
 				animDying = new Set([...animDying, mid]);
-				animText = `${e.minion_name} falls`;
+				animText = `${name} falls`;
 				await sleep(550);
 				animSelfBoard = animSelfBoard.filter((m) => m.instance_id !== mid);
 				animOppBoard = animOppBoard.filter((m) => m.instance_id !== mid);
 				animDying = new Set([...animDying].filter((id) => id !== mid));
-			} else if (e.type === "buff") {
-				animText = `${e.target_name} grows stronger`;
-				updateMinionBuff(e.target_id as string, e.attack as number, e.health as number);
-				await sleep(600);
 			} else if (e.type === "summon") {
 				const m = e.minion as MinionSnapshot;
 				if (m) {
@@ -229,7 +253,18 @@
 				animCleaveSplash = new Set([...animCleaveSplash].filter((id) => id !== e.target_id));
 				await sleep(120);
 				animStricken = new Set([...animStricken].filter((id) => id !== e.target_id));
-			} else if (e.type === "damage") {
+			} else if (e.type === "spawn") {
+				const m = e.minion as MinionSnapshot;
+				if (m) {
+					const isOppSide = isSelfA ? e.player_idx === 1 : e.player_idx === 0;
+					animNewIds = new Set([m.instance_id]);
+					if (isOppSide) animOppBoard = insertMinion(animOppBoard, m, animOppBoard.length);
+					else animSelfBoard = insertMinion(animSelfBoard, m, animSelfBoard.length);
+					animText = `${m.name} summoned`;
+					await sleep(600);
+					setTimeout(() => (animNewIds = new Set()), 500);
+				}
+			} else if (e.type === "damage" && "target_id" in e) {
 				const targetId = e.target_id as string;
 				const amount = e.amount as number;
 				const targetIsOpp = animOppBoard.some((m) => m.instance_id === targetId);
@@ -247,14 +282,7 @@
 		animBadges = new Map();
 		clearDamageNumbers();
 
-		const result = combat.combatResult;
-		if (result) {
-			if (result.winner_player === null) animText = "Tie — no damage dealt";
-			else if (result.winner_player === connection.playerId) animText = "You won this round";
-			else animText = "You lost this round";
-		} else {
-			animText = "";
-		}
+		animText = "";
 		animPhase = "done";
 		await sleep(events.length > 0 ? 900 : 1400);
 	}
@@ -263,19 +291,9 @@
 <div class="battle-arena" class:shaking={animShake} bind:this={arenaEl}>
 	{#if match.opponent && combat.combatMeta}
 		{@const pid = match.opponent.player_id}
-		{@const health = animPhase === "done" && combat.combatResult
-			? (combat.combatResult.health[pid] ?? match.opponent.health)
-			: (combat.combatMeta.pre_health[pid] ?? match.opponent.health)}
-		{@const armor = animPhase === "done" && combat.combatResult
-			? match.opponent.armor
-			: (combat.combatMeta.pre_armor[pid] ?? match.opponent.armor)}
-		<EnemyInfo
-			name={match.opponent.name}
-			{health}
-			{armor}
-			hero={match.opponent.hero ?? null}
-			isGhost={match.opponent.is_ghost}
-		/>
+		{@const health = animPhase === "done" ? match.opponent.health : (combat.combatMeta.pre_health[pid] ?? match.opponent.health)}
+		{@const armor = animPhase === "done" ? match.opponent.armor : (combat.combatMeta.pre_armor[pid] ?? match.opponent.armor)}
+		<EnemyInfo name={match.opponent.name} {health} {armor} hero={match.opponent.hero ?? null} isGhost={match.opponent.is_ghost} />
 	{:else if match.opponent}
 		<EnemyInfo
 			name={match.opponent.name}
@@ -298,18 +316,17 @@
 	/>
 
 	<div class="arena-divider">
-		{#if animPhase === "done" && combat.combatResult && match.self}
-			<div
-				class="result-pill"
-				class:win={combat.combatResult.winner_player === match.self.player_id}
-				class:loss={combat.combatResult.winner_player !== null && combat.combatResult.winner_player !== match.self.player_id}
-			>
-				{#if combat.combatResult.winner_player === null}
+		{#if animPhase === "done" && match.self}
+			{@const summary = combatDamageSummary()}
+			<div class="result-pill" class:win={summary?.outcome === "win"} class:loss={summary?.outcome === "loss"}>
+				{#if summary?.outcome === "tie"}
 					Tie — no damage
-				{:else if combat.combatResult.winner_player === match.self.player_id}
-					You win · opponent takes {combat.combatResult.damage}
+				{:else if summary?.outcome === "win"}
+					You win · opponent takes {summary.damage}
+				{:else if summary?.outcome === "loss"}
+					You lose · you take {summary.damage}
 				{:else}
-					You lose · you take {combat.combatResult.damage}
+					Combat complete
 				{/if}
 			</div>
 		{:else}
@@ -331,12 +348,8 @@
 
 	{#if match.self && combat.combatMeta}
 		{@const pid = match.self.player_id}
-		{@const health = animPhase === "done" && combat.combatResult
-			? (combat.combatResult.health[pid] ?? match.self.health)
-			: (combat.combatMeta.pre_health[pid] ?? match.self.health)}
-		{@const armor = animPhase === "done" && combat.combatResult
-			? match.self.armor
-			: (combat.combatMeta.pre_armor[pid] ?? match.self.armor)}
+		{@const health = animPhase === "done" ? match.self.health : (combat.combatMeta.pre_health[pid] ?? match.self.health)}
+		{@const armor = animPhase === "done" ? match.self.armor : (combat.combatMeta.pre_armor[pid] ?? match.self.armor)}
 		<PlayerInfo name={match.self.name} {health} {armor} hero={match.self.hero ?? null} />
 	{:else if match.self}
 		<PlayerInfo name={match.self.name} health={match.self.health} armor={match.self.armor} hero={match.self.hero ?? null} />
@@ -359,27 +372,55 @@
 		border: 1px solid #3a2e22;
 		backdrop-filter: blur(8px);
 		overflow: visible;
-		animation: arena-in 0.52s cubic-bezier(0.22, 1, 0.36, 1) both, arena-border-in 0.9s ease-out both;
+		animation:
+			arena-in 0.52s cubic-bezier(0.22, 1, 0.36, 1) both,
+			arena-border-in 0.9s ease-out both;
 	}
 	@keyframes arena-in {
-		0% { opacity: 0; transform: scale(0.93) translateY(14px); }
-		60% { opacity: 1; transform: scale(1.015) translateY(-2px); }
-		100% { opacity: 1; transform: scale(1) translateY(0); }
+		0% {
+			opacity: 0;
+			transform: scale(0.93) translateY(14px);
+		}
+		60% {
+			opacity: 1;
+			transform: scale(1.015) translateY(-2px);
+		}
+		100% {
+			opacity: 1;
+			transform: scale(1) translateY(0);
+		}
 	}
 	@keyframes arena-border-in {
-		0% { box-shadow: 0 0 0 0 #c87c3099; }
-		35% { box-shadow: 0 0 40px 6px #c87c3055; }
-		100% { box-shadow: none; }
+		0% {
+			box-shadow: 0 0 0 0 #c87c3099;
+		}
+		35% {
+			box-shadow: 0 0 40px 6px #c87c3055;
+		}
+		100% {
+			box-shadow: none;
+		}
 	}
 	.battle-arena.shaking {
 		animation: arena-shake 0.34s ease-in-out;
 	}
 	@keyframes arena-shake {
-		0%, 100% { transform: translateX(0); }
-		18% { transform: translateX(-6px); }
-		40% { transform: translateX(5px); }
-		65% { transform: translateX(-3px); }
-		82% { transform: translateX(2px); }
+		0%,
+		100% {
+			transform: translateX(0);
+		}
+		18% {
+			transform: translateX(-6px);
+		}
+		40% {
+			transform: translateX(5px);
+		}
+		65% {
+			transform: translateX(-3px);
+		}
+		82% {
+			transform: translateX(2px);
+		}
 	}
 
 	.arena-divider {
@@ -426,12 +467,24 @@
 		box-shadow: 0 0 20px 2px #924c4c33;
 	}
 	@keyframes combat-entrance {
-		from { opacity: 0; transform: scale(0.6); }
-		to { opacity: 1; transform: scale(1); }
+		from {
+			opacity: 0;
+			transform: scale(0.6);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1);
+		}
 	}
 	@keyframes result-pop {
-		from { opacity: 0; transform: scale(0.5); }
-		to { opacity: 1; transform: scale(1); }
+		from {
+			opacity: 0;
+			transform: scale(0.5);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1);
+		}
 	}
 
 	.dmg-float {

@@ -41,8 +41,12 @@
 	}
 
 	@keyframes fade-in {
-		from { opacity: 0; }
-		to { opacity: 1; }
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 
 	.discover-panel {
@@ -59,8 +63,14 @@
 	}
 
 	@keyframes panel-in {
-		from { opacity: 0; transform: scale(0.88) translateY(16px); }
-		to { opacity: 1; transform: scale(1) translateY(0); }
+		from {
+			opacity: 0;
+			transform: scale(0.88) translateY(16px);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1) translateY(0);
+		}
 	}
 
 	.discover-title {
@@ -90,12 +100,16 @@
 		padding: 0;
 		cursor: pointer;
 		border-radius: 18px;
-		transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.15s;
+		transition:
+			transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+			box-shadow 0.15s;
 	}
 
 	.discover-card-wrap:hover {
 		transform: translateY(-6px) scale(1.04);
-		box-shadow: 0 16px 40px #000000aa, 0 0 0 2px #d4a02077;
+		box-shadow:
+			0 16px 40px #000000aa,
+			0 0 0 2px #d4a02077;
 	}
 
 	.discover-card-wrap:focus-visible {

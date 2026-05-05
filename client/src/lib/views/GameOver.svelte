@@ -52,8 +52,12 @@
 		animation: go-reveal 0.6s ease-out;
 	}
 	@keyframes go-reveal {
-		from { opacity: 0; }
-		to { opacity: 1; }
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 	.go-content {
 		display: flex;

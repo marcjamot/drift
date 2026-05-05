@@ -42,6 +42,11 @@
 		ondragstart,
 		ondragend,
 	}: Props = $props();
+
+	const mem = $derived(minion.memory ?? {});
+	const divineShield = $derived(!!mem["divine_shield"] && !mem["divine_shield_spent"]);
+	const maxHealth = $derived(minion.max_health ?? minion.health);
+	const tribe = $derived(minion.tribe ?? "neutral");
 </script>
 
 <button
@@ -52,8 +57,8 @@
 	class:size-large={size === "large"}
 	class:draggable
 	class:selected
-	class:taunt={minion.keywords.includes("taunt")}
-	class:divine={minion.divine_shield}
+	class:taunt={!!mem["taunt"]}
+	class:divine={divineShield}
 	class:golden={minion.golden}
 	class:stricken
 	class:impact
@@ -77,19 +82,11 @@
 	{/if}
 	<div class="tier-badge">T{minion.tier}</div>
 	<div class="name">{minion.name}</div>
-	<div class={`tribe tribe-${minion.tribe}`}>{minion.tribe}</div>
-	<div class="keywords">
-		{#each minion.keywords as kw (kw)}
-			<span class="keyword">{kw}</span>
-		{/each}
-		{#if minion.divine_shield}
-			<span class="keyword ds">divine</span>
-		{/if}
-	</div>
+	<div class={`tribe tribe-${tribe}`}>{tribe}</div>
 	<div class="stats">
 		<span class="atk">{minion.attack}</span>
 		<span class="sep">/</span>
-		<span class="hp" class:damaged={minion.health < minion.max_health}>
+		<span class="hp" class:damaged={minion.health < maxHealth}>
 			{minion.health}
 		</span>
 	</div>
@@ -173,7 +170,9 @@
 		text-align: center;
 		opacity: 0;
 		pointer-events: none;
-		transition: opacity 0.12s ease, transform 0.12s ease;
+		transition:
+			opacity 0.12s ease,
+			transform 0.12s ease;
 		z-index: 40;
 	}
 
@@ -193,7 +192,7 @@
 		transform: translateX(-50%) translateY(0);
 	}
 
-.minion-card.selected {
+	.minion-card.selected {
 		border-color: #d4a020;
 		box-shadow: 0 0 10px #d4a02055;
 	}
@@ -206,7 +205,9 @@
 	}
 	.minion-card.golden {
 		border-color: #d4a020;
-		box-shadow: 0 0 14px #d4a02066, inset 0 0 18px #d4a02022;
+		box-shadow:
+			0 0 14px #d4a02066,
+			inset 0 0 18px #d4a02022;
 	}
 	/* Shake when struck */
 	.minion-card.stricken {
@@ -223,9 +224,21 @@
 		pointer-events: none;
 	}
 	@keyframes card-die {
-		0% { opacity: 1; transform: scale(1) rotate(0deg); filter: brightness(1); }
-		30% { opacity: 1; transform: scale(1.1) rotate(-4deg); filter: brightness(2.2) saturate(0.2); }
-		100% { opacity: 0; transform: scale(0.45) rotate(10deg) translateY(24px); filter: brightness(0); }
+		0% {
+			opacity: 1;
+			transform: scale(1) rotate(0deg);
+			filter: brightness(1);
+		}
+		30% {
+			opacity: 1;
+			transform: scale(1.1) rotate(-4deg);
+			filter: brightness(2.2) saturate(0.2);
+		}
+		100% {
+			opacity: 0;
+			transform: scale(0.45) rotate(10deg) translateY(24px);
+			filter: brightness(0);
+		}
 	}
 
 	.minion-card.is-new {
@@ -293,9 +306,18 @@
 	}
 
 	@keyframes cleave-pulse {
-		0% { transform: scale(1); filter: brightness(1); }
-		38% { transform: scale(1.08); filter: brightness(1.45); }
-		100% { transform: scale(1); filter: brightness(1); }
+		0% {
+			transform: scale(1);
+			filter: brightness(1);
+		}
+		38% {
+			transform: scale(1.08);
+			filter: brightness(1.45);
+		}
+		100% {
+			transform: scale(1);
+			filter: brightness(1);
+		}
 	}
 
 	.minion-card.size-small {
@@ -441,9 +463,18 @@
 		z-index: 5;
 	}
 	@keyframes badge-pop {
-		0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.8); }
-		25% { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.08); }
-		100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+		0% {
+			opacity: 0;
+			transform: translateX(-50%) translateY(6px) scale(0.8);
+		}
+		25% {
+			opacity: 1;
+			transform: translateX(-50%) translateY(-2px) scale(1.08);
+		}
+		100% {
+			opacity: 1;
+			transform: translateX(-50%) translateY(0) scale(1);
+		}
 	}
 	.minion-card.size-small .star {
 		font-size: 11px;

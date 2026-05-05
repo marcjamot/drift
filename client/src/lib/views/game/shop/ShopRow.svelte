@@ -13,14 +13,21 @@
 		ontargetselect?: (index: number) => void;
 	}
 
-	let { self, cardsDraggable = false, oncarddragstart, oncarddragend, ghostSourceShopIndex = null, targeting = false, ontargetselect }: Props = $props();
+	let {
+		self,
+		cardsDraggable = false,
+		oncarddragstart,
+		oncarddragend,
+		ghostSourceShopIndex = null,
+		targeting = false,
+		ontargetselect,
+	}: Props = $props();
 </script>
 
 <div class="shop-content">
 	<div class="shop-row">
 		{#each self.shop as slot, i (`${slot?.instance_id ?? "empty"}-${i}`)}
 			{#if slot}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div
 					class="shop-slot"
 					class:target-highlight={targeting}
@@ -44,16 +51,10 @@
 	</div>
 
 	<div class="shop-actions">
-		<button onclick={() => send({ type: "refresh" })} disabled={self.gold < 1} class="btn">
-			Refresh (1g)
-		</button>
+		<button onclick={() => send({ type: "refresh" })} disabled={self.gold < 1} class="btn"> Refresh (1g) </button>
 
 		{#if self.tavern_tier < 6}
-			<button
-				onclick={() => send({ type: "upgrade" })}
-				disabled={self.gold < self.upgrade_cost}
-				class="btn upgrade"
-			>
+			<button onclick={() => send({ type: "upgrade" })} disabled={self.gold < self.upgrade_cost} class="btn upgrade">
 				Upgrade ({self.upgrade_cost}g → Tier {self.tavern_tier + 1})
 			</button>
 		{:else}
@@ -86,15 +87,21 @@
 		align-items: center;
 		gap: 2px;
 		border-radius: 18px;
-		transition: box-shadow 0.15s, transform 0.15s;
+		transition:
+			box-shadow 0.15s,
+			transform 0.15s;
 	}
 	.shop-slot.target-highlight {
 		cursor: pointer;
-		box-shadow: 0 0 0 2px #7ab0e088, 0 0 16px 4px #3a6ab033;
+		box-shadow:
+			0 0 0 2px #7ab0e088,
+			0 0 16px 4px #3a6ab033;
 		transform: translateY(-2px);
 	}
 	.shop-slot.target-highlight:hover {
-		box-shadow: 0 0 0 2px #a8d4ff, 0 0 24px 6px #5a8abf44;
+		box-shadow:
+			0 0 0 2px #a8d4ff,
+			0 0 24px 6px #5a8abf44;
 		transform: translateY(-4px);
 	}
 	.empty-slot {

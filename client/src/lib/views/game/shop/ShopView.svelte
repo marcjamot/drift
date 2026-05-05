@@ -40,7 +40,7 @@
 	});
 
 	$effect(() => {
-		if (match.phase !== "buy") clearDragState();
+		if (match.phase !== "shop") clearDragState();
 	});
 
 	function clearDragState() {
@@ -180,7 +180,7 @@
 	}
 
 	function dragShopCard(index: number, minion: MinionSnapshot, event: DragEvent) {
-		if (match.phase !== "buy") return;
+		if (match.phase !== "shop") return;
 		event.dataTransfer?.setData("text/plain", `shop:${index}`);
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 		dragSource = { origin: "shop", index, name: minion.name };
@@ -189,7 +189,7 @@
 	}
 
 	function dragHandCard(index: number, event: DragEvent) {
-		if (match.phase !== "buy" || !match.self) return;
+		if (match.phase !== "shop" || !match.self) return;
 		const minion = match.self.hand[index];
 		if (!minion) return;
 		event.dataTransfer?.setData("text/plain", `hand:${index}`);
@@ -200,7 +200,7 @@
 	}
 
 	function dragBoardCard(index: number, event: DragEvent) {
-		if (match.phase !== "buy" || !match.self) return;
+		if (match.phase !== "shop" || !match.self) return;
 		const minion = match.self.board[index];
 		if (!minion) return;
 		event.dataTransfer?.setData("text/plain", `board:${index}`);
@@ -252,10 +252,7 @@
 				</div>
 				{#if isActive}
 					{#if heroTargeting !== null}
-						<button
-							class="hero-power-btn targeting"
-							onclick={() => (heroTargeting = null)}
-						>
+						<button class="hero-power-btn targeting" onclick={() => (heroTargeting = null)}>
 							<span class="power-label">Cancel (targeting {heroTargeting})</span>
 						</button>
 					{:else}
@@ -372,8 +369,14 @@
 		animation: shop-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 	}
 	@keyframes shop-in {
-		from { opacity: 0; transform: translateY(18px); }
-		to { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(18px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 	.buy-layout.flash {
 		animation: dmg-flash 0.8s ease-out;
@@ -431,11 +434,16 @@
 		animation: none;
 	}
 	@keyframes zone-pulse {
-		0%, 100% {
-			box-shadow: inset 0 0 0 1px #5ca87066, 0 0 16px 2px #5ca87022;
+		0%,
+		100% {
+			box-shadow:
+				inset 0 0 0 1px #5ca87066,
+				0 0 16px 2px #5ca87022;
 		}
 		50% {
-			box-shadow: inset 0 0 0 1px #71c186aa, 0 0 28px 6px #71c18644;
+			box-shadow:
+				inset 0 0 0 1px #71c186aa,
+				0 0 28px 6px #71c18644;
 		}
 	}
 
@@ -488,7 +496,12 @@
 		cursor: default;
 		white-space: nowrap;
 		flex-shrink: 0;
-		transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
+		transition:
+			border-color 0.15s,
+			background 0.15s,
+			color 0.15s,
+			transform 0.15s,
+			box-shadow 0.15s;
 	}
 	.hero-power-btn.ready {
 		border-color: #5a8abf;

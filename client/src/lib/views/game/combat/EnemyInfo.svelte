@@ -14,8 +14,14 @@
 <div class="opp-plate">
 	<div class="arena-nameplate">
 		<span class="arena-kicker">Enemy</span>
-		<span class="arena-name">{name}{#if isGhost} (Ghost){/if}</span>
-		<span class="arena-hp" class:low={health <= 15}>♥ {health}{#if armor > 0} / 🛡 {armor}{/if}</span>
+		<span class="arena-name"
+			>{name}{#if isGhost}
+				(Ghost){/if}</span
+		>
+		<span class="arena-hp" class:low={health <= 15}
+			>♥ {health}{#if armor > 0}
+				/ 🛡 {armor}{/if}</span
+		>
 	</div>
 	{#if hero}
 		<div class="hero-row">

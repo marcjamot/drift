@@ -53,7 +53,7 @@
 	{/if}
 
 	<div class="cards">
-		{#each (ui.heroOptions ?? []) as hero, i (hero.id)}
+		{#each ui.heroOptions ?? [] as hero, i (hero.id)}
 			<button
 				class="hero-card"
 				class:selected={picked === i}
@@ -84,8 +84,14 @@
 		animation: fade-in 0.4s ease both;
 	}
 	@keyframes fade-in {
-		from { opacity: 0; transform: translateY(16px); }
-		to   { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(16px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 
 	.header {
@@ -111,7 +117,10 @@
 		font-weight: 700;
 		min-width: 52px;
 		text-align: center;
-		transition: border-color 0.2s, background 0.2s, color 0.2s;
+		transition:
+			border-color 0.2s,
+			background 0.2s,
+			color 0.2s;
 	}
 	.timer.urgent {
 		border-color: #c77474;
@@ -120,8 +129,13 @@
 		animation: timer-pulse 0.75s ease-in-out infinite;
 	}
 	@keyframes timer-pulse {
-		0%, 100% { box-shadow: none; }
-		50% { box-shadow: 0 0 14px 3px #c7747455; }
+		0%,
+		100% {
+			box-shadow: none;
+		}
+		50% {
+			box-shadow: 0 0 14px 3px #c7747455;
+		}
 	}
 
 	.waiting-msg {
@@ -131,8 +145,13 @@
 		animation: blink 1.6s ease-in-out infinite;
 	}
 	@keyframes blink {
-		0%, 100% { opacity: 1; }
-		50%       { opacity: 0.45; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.45;
+		}
 	}
 
 	.cards {
@@ -169,7 +188,9 @@
 		transform: translateY(-6px) scale(1.02);
 		border-color: #5a8abf;
 		background: rgba(20, 30, 48, 0.9);
-		box-shadow: 0 16px 40px #00000088, 0 0 0 1px #5a8abf44;
+		box-shadow:
+			0 16px 40px #00000088,
+			0 0 0 1px #5a8abf44;
 	}
 	.hero-card:disabled {
 		cursor: default;
@@ -177,7 +198,9 @@
 	.hero-card.selected {
 		border-color: #71c186;
 		background: rgba(14, 36, 20, 0.9);
-		box-shadow: 0 0 0 2px #71c18666, 0 16px 40px #00000066;
+		box-shadow:
+			0 0 0 2px #71c18666,
+			0 16px 40px #00000066;
 		transform: translateY(-4px) scale(1.03);
 	}
 	.hero-card.dimmed {

@@ -34,10 +34,11 @@ export function connect(url = "ws://localhost:8765") {
 		ui.error = "Connection error";
 	};
 
-	ws.onmessage = (ev) => {
+	ws.onmessage = async (ev) => {
 		try {
-			handleMessage(JSON.parse(ev.data));
-		} catch {
+			await handleMessage(JSON.parse(ev.data));
+		} catch (error) {
+			console.warn("Failed to handle websocket message", error);
 		}
 	};
 }

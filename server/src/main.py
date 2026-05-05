@@ -7,7 +7,7 @@ from typing import Any, Awaitable, Callable, Dict, cast
 import websockets
 import websockets.exceptions
 
-from .matchmaking import Matchmaker
+from .engine.matchmaker import Matchmaker
 
 logging.basicConfig(
     level=logging.INFO,
